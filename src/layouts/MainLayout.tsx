@@ -31,7 +31,7 @@ export default function MainLayout() {
     applicationName: APP_NAME,
     isApplication: true,
     isSticky: true,
-    zIndex: 9999,
+    zIndex: 222,
   };
 
   const sidemenuItems = [
@@ -66,7 +66,7 @@ export default function MainLayout() {
       <Box w="auto">
         <Sidemenu
           isSticky
-          zIndex={8888}
+          zIndex={111}
           items={sidemenuItems}
           onNavigate={handleNavigate}
         />
