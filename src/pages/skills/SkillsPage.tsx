@@ -4,6 +4,7 @@ import type { ArtifactItem } from "../../shared/types/artifacts";
 import ArtifactCard from "../../shared/components/ArtifactCard";
 import ArtifactPageHeader from "../../shared/components/ArtifactPageHeader";
 import ArtifactSearchFiltersCard from "../../shared/components/ArtifactSearchFiltersCard";
+import UploadArtifactModal from "../../shared/components/UploadArtifactModal";
 
 const TOOL_FILTERS = ["All Tools", "GitHub Copilot", "Claude Code"];
 
@@ -126,29 +127,13 @@ export default function SkillsPage() {
         ))}
       </Grid>
 
-      <Modal
+      <UploadArtifactModal
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
-        aria-labelledby="upload-skill-modal-title"
-      >
-        <Box column gap={3} p={4}>
-          <Heading id="upload-skill-modal-title" as="h2">
-            Upload Skill
-          </Heading>
-          <P>
-            Upload flow is coming next. This placeholder modal confirms button
-            wiring and interaction behavior.
-          </P>
-          <Box w={1} justifyContent="flex-end" gap={2}>
-            <Button
-              variant="secondaryDark"
-              onClick={() => setIsUploadModalOpen(false)}
-            >
-              Close
-            </Button>
-          </Box>
-        </Box>
-      </Modal>
+        artifactLabel="Skill"
+        availableTools={TOOL_FILTERS.filter((tool) => tool !== "All Tools")}
+        availableTags={SKILL_TAGS}
+      />
 
       <Modal
         isOpen={Boolean(selectedSkill)}

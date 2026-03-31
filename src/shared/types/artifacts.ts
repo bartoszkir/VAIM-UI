@@ -11,3 +11,11 @@ export type ArtifactItem = {
   comments: number;
   updatedAt: string;
 };
+
+export type UploadArtifactFormData = {
+  title: string;
+  description: string;
+  content: string;
+  tools: string[];
+  tags: string[];
+};

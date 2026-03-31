@@ -1,5 +1,5 @@
 import { BrowserRouter } from "react-router";
-import { LinksProvider, VuiProvider } from "@veracity/vui";
+import { LinksProvider, VuiProvider, Toaster } from "@veracity/vui";
 import AppRouter from "./Router";
 
 export default function App() {
@@ -9,6 +9,7 @@ export default function App() {
         <LinksProvider>
           <AppRouter />
         </LinksProvider>
+        <Toaster />
       </VuiProvider>
     </BrowserRouter>
   );

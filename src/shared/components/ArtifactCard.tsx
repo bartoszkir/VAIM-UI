@@ -22,9 +22,10 @@ export default function ArtifactCard({
             isRound
             variant={artifact.isFavorite ? "primaryDark" : "tertiaryDark"}
             size="sm"
-            icon="uiThumbsUp"
-          />
-          <T whiteSpace="nowrap">{artifact.favorites}</T>
+            iconLeft="uiThumbsUp"
+          >
+            {artifact.favorites}
+          </Button>
         </Box>
       </Box>
 
