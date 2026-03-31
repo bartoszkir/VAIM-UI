@@ -4,6 +4,7 @@ import SkillsPage from "./pages/skills/SkillsPage";
 import AgentsPage from "./pages/agents/AgentsPage";
 import PromptsPage from "./pages/prompts/PromptsPage";
 import InstructionsPage from "./pages/instructions/InstructionsPage";
+import UnauthorizedPage from "./pages/unauthorized/UnauthorizedPage";
 
 export default function AppRouter() {
   return (
@@ -15,6 +16,7 @@ export default function AppRouter() {
         <Route path="/prompts" element={<PromptsPage />} />
         <Route path="/instructions" element={<InstructionsPage />} />
       </Route>
+      <Route path="/unauthorized" element={<UnauthorizedPage />} />
     </Routes>
   );
 }
