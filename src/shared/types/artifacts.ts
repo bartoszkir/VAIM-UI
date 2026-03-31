@@ -2,11 +2,12 @@ export type ArtifactItem = {
   id: string;
   title: string;
   author: string;
-  publishedDaysAgo: number;
+  publishedAt: string;
   description: string;
   tools: string[];
   tags: string[];
   favorites: number;
+  isFavorite: boolean;
   comments: number;
-  updatedDaysAgo: number;
+  updatedAt: string;
 };

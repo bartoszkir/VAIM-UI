@@ -1,5 +1,6 @@
 import { Box, Button, Card, Heading, P, T, Tag } from "@veracity/vui";
 import type { ArtifactItem } from "../types/artifacts";
+import { relativeTime } from "../utils/relativeTime";
 
 type ArtifactCardProps = {
   artifact: ArtifactItem;
@@ -16,11 +17,19 @@ export default function ArtifactCard({
     <Card p={{ xs: 3, md: 4 }} column gap={2.5}>
       <Box w={1} justifyContent="space-between" alignItems="flex-start" gap={2}>
         <Heading as="h3">{artifact.title}</Heading>
-        <T whiteSpace="nowrap">{artifact.favorites}</T>
+        <Box gap={1}>
+          <Button
+            isRound
+            variant={artifact.isFavorite ? "primaryDark" : "tertiaryDark"}
+            size="sm"
+            icon="uiThumbsUp"
+          />
+          <T whiteSpace="nowrap">{artifact.favorites}</T>
+        </Box>
       </Box>
 
       <T color="neutral.textSecondary">
-        {artifact.author} | {artifact.publishedDaysAgo} days ago
+        {artifact.author} | {relativeTime(artifact.publishedAt)}
       </T>
 
       <P color="neutral.textSecondary">{artifact.description}</P>
@@ -44,8 +53,7 @@ export default function ArtifactCard({
       <Box w={1} justifyContent="space-between" alignItems="center" mt={1}>
         <T color="neutral.textSecondary">{artifact.comments} comments</T>
         <T color="neutral.textSecondary">
-          Updated {artifact.updatedDaysAgo} day
-          {artifact.updatedDaysAgo > 1 ? "s" : ""} ago
+          Updated {relativeTime(artifact.updatedAt)}
         </T>
       </Box>
 
