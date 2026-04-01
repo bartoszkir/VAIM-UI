@@ -1,6 +1,6 @@
-import config from "../config";
+import type { UserInfo } from "../auth/types";
+import { httpClient } from "./httpClient";
 
-export async function getCurrentUser() {
-  const response = await fetch(`${config.apiBaseUrl}/auth/me`);
-  return response.json();
+export async function getCurrentUser(): Promise<UserInfo> {
+  return httpClient.get<UserInfo>("/auth/me");
 }
