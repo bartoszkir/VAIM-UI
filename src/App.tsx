@@ -8,14 +8,14 @@ export default function App() {
   return (
     <BrowserRouter>
       <AppQueryClientProvider>
-        <AuthProvider>
-          <VuiProvider>
+        <VuiProvider>
+          <AuthProvider>
             <LinksProvider>
               <AppRouter />
             </LinksProvider>
             <Toaster />
-          </VuiProvider>
-        </AuthProvider>
+          </AuthProvider>
+        </VuiProvider>
       </AppQueryClientProvider>
     </BrowserRouter>
   );
