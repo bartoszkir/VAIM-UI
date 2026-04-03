@@ -1,97 +1,101 @@
 import { useMemo, useState } from "react";
-import { Box, Grid, Heading, Modal, P, Button } from "@veracity/vui";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import {
+  Box,
+  Grid,
+  Heading,
+  Modal,
+  P,
+  Button,
+  Spinner,
+  Tag,
+} from "@veracity/vui";
+import { getPagedPrompts } from "../../api/prompts";
+import { getTags } from "../../api/tags";
+import { PromptType } from "../../api/types";
 import type { ArtifactItem } from "../../shared/types/artifacts";
 import ArtifactCard from "../../shared/components/ArtifactCard";
 import ArtifactPageHeader from "../../shared/components/ArtifactPageHeader";
 import ArtifactSearchFiltersCard from "../../shared/components/ArtifactSearchFiltersCard";
 import UploadArtifactModal from "../../shared/components/UploadArtifactModal";
+import { useBottomReach } from "../../shared/hooks/useBottomReach";
+import { artifactFromPrompt } from "../../shared/utils/artifactFromPrompt";
 
 const TOOL_FILTERS = ["All Tools", "GitHub Copilot", "Claude Code"];
-
-const SKILL_TAGS = [
-  "react",
-  "nextjs",
-  "auth",
-  "backend",
-  "ui",
-  "database",
-  "api",
-  "security",
-  "performance",
-  "devops",
-  "testing",
-  "accessibility",
-  "typescript",
-];
-
-const SKILLS: ArtifactItem[] = [
-  {
-    id: "react-component-refactoring",
-    title: "React Component Refactoring",
-    author: "Alex Chen",
-    publishedAt: "2026-03-24T00:00:00.000Z",
-    description:
-      "Advanced patterns for refactoring large React components using composition and hooks.",
-    tools: ["GitHub Copilot", "Claude Code"],
-    tags: ["react", "performance", "refactoring"],
-    favorites: 245,
-    isFavorite: true,
-    comments: 18,
-    updatedAt: "2026-03-29T00:00:00.000Z",
-  },
-  {
-    id: "ui-component-library-generation",
-    title: "UI Component Library Generation",
-    author: "Design Team",
-    publishedAt: "2026-03-21T00:00:00.000Z",
-    description:
-      "Prompts and patterns for generating consistent, accessible component libraries.",
-    tools: ["GitHub Copilot", "Claude Code"],
-    tags: ["ui", "components", "accessibility", "design-systems"],
-    favorites: 334,
-    isFavorite: true,
-    comments: 27,
-    updatedAt: "2026-03-28T00:00:00.000Z",
-  },
-  {
-    id: "typescript-type-inference",
-    title: "TypeScript Type Inference",
-    author: "TypeScript Team",
-    publishedAt: "2026-03-26T00:00:00.000Z",
-    description:
-      "Techniques for leveraging advanced TypeScript type inference in your codebase.",
-    tools: ["GitHub Copilot"],
-    tags: ["typescript", "backend", "performance"],
-    favorites: 178,
-    isFavorite: false,
-    comments: 9,
-    updatedAt: "2026-03-30T00:00:00.000Z",
-  },
-];
+const PAGE_SIZE = 12;
 
 export default function SkillsPage() {
   const [searchValue, setSearchValue] = useState("");
+  const [activeTool, setActiveTool] = useState(TOOL_FILTERS[0]);
+  const [activeTag, setActiveTag] = useState<string | null>(null);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [selectedSkill, setSelectedSkill] = useState<ArtifactItem | null>(null);
 
-  const visibleSkills = useMemo(() => {
-    const query = searchValue.trim().toLowerCase();
-    if (!query) {
-      return SKILLS;
+  const tagsQuery = useQuery({
+    queryKey: ["artifact-tags"],
+    queryFn: getTags,
+  });
+
+  const skillsQuery = useInfiniteQuery({
+    queryKey: [
+      "artifacts",
+      PromptType.Skill,
+      searchValue,
+      activeTool,
+      activeTag,
+    ],
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) =>
+      getPagedPrompts({
+        page: pageParam,
+        pageSize: PAGE_SIZE,
+        type: PromptType.Skill,
+        search: searchValue.trim() || undefined,
+        tool: activeTool === "All Tools" ? undefined : activeTool,
+        tag: activeTag ?? undefined,
+      }),
+    getNextPageParam: (lastPage, allPages) => {
+      const loadedCount = allPages.reduce(
+        (sum, page) => sum + (page.items?.length ?? 0),
+        0,
+      );
+
+      if (loadedCount >= lastPage.totalCount) {
+        return undefined;
+      }
+
+      return lastPage.page + 1;
+    },
+  });
+
+  const visibleSkills = useMemo(
+    () =>
+      skillsQuery.data?.pages
+        .flatMap((page) => page.items ?? [])
+        .map(artifactFromPrompt) ?? [],
+    [skillsQuery.data],
+  );
+
+  const skillTags = useMemo(
+    () =>
+      (tagsQuery.data ?? [])
+        .map((tag) => tag.name?.trim())
+        .filter((name): name is string => Boolean(name)),
+    [tagsQuery.data],
+  );
+
+  const handleLoadMore = () => {
+    if (!skillsQuery.hasNextPage || skillsQuery.isFetchingNextPage) {
+      return;
     }
 
-    return SKILLS.filter((skill) => {
-      const haystack = [
-        skill.title,
-        skill.author,
-        skill.description,
-        ...skill.tags,
-      ]
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(query);
-    });
-  }, [searchValue]);
+    void skillsQuery.fetchNextPage();
+  };
+
+  const loadMoreRef = useBottomReach({
+    enabled: Boolean(skillsQuery.hasNextPage),
+    onReachBottom: handleLoadMore,
+  });
 
   return (
     <Box column w={1} p={{ xs: 3, md: 4 }} gap={3}>
@@ -109,30 +113,74 @@ export default function SkillsPage() {
         searchValue={searchValue}
         onSearchChange={setSearchValue}
         toolFilters={TOOL_FILTERS}
-        activeTool={TOOL_FILTERS[0]}
-        tags={SKILL_TAGS}
+        activeTool={activeTool}
+        onToolChange={setActiveTool}
+        tags={skillTags}
+        activeTag={activeTag ?? undefined}
+        onTagChange={setActiveTag}
       />
 
-      <Grid
-        w={1}
-        gap={3}
-        gridTemplateColumns={{ sm: "1fr", md: "1fr 1fr", lg: "1fr 1fr" }}
-      >
-        {visibleSkills.map((skill) => (
-          <ArtifactCard
-            key={skill.id}
-            artifact={skill}
-            onViewDetails={setSelectedSkill}
-          />
-        ))}
-      </Grid>
+      {skillsQuery.isPending ? (
+        <Box w={1} justifyContent="center" py={6}>
+          <Spinner aria-label="Loading skills" />
+        </Box>
+      ) : skillsQuery.isError ? (
+        <Box column w={1} gap={2} alignItems="center" py={6}>
+          <P color="error.text">Unable to load skills right now.</P>
+          <Button
+            variant="secondaryDark"
+            onClick={() => void skillsQuery.refetch()}
+          >
+            Retry
+          </Button>
+        </Box>
+      ) : visibleSkills.length === 0 ? (
+        <Box column w={1} alignItems="center" gap={2} py={6}>
+          <P color="neutral.textSecondary">No skills match your filters yet.</P>
+        </Box>
+      ) : (
+        <>
+          <Grid
+            w={1}
+            gap={3}
+            gridTemplateColumns={{ sm: "1fr", md: "1fr 1fr", lg: "1fr 1fr" }}
+          >
+            {visibleSkills.map((skill) => (
+              <ArtifactCard
+                key={skill.id}
+                artifact={skill}
+                onViewDetails={setSelectedSkill}
+              />
+            ))}
+          </Grid>
+
+          {activeTag ? (
+            <Box w={1} alignItems="center" gap={2}>
+              <P color="neutral.textSecondary">Filtering by tag:</P>
+              <Tag
+                text={activeTag}
+                variant="subtleBlue"
+                isInteractive
+                onClick={() => setActiveTag(null)}
+              />
+            </Box>
+          ) : null}
+
+          <div ref={loadMoreRef} />
+          {skillsQuery.isFetchingNextPage ? (
+            <Box w={1} justifyContent="center" py={3}>
+              <Spinner aria-label="Loading more skills" />
+            </Box>
+          ) : null}
+        </>
+      )}
 
       <UploadArtifactModal
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
         artifactLabel="Skill"
         availableTools={TOOL_FILTERS.filter((tool) => tool !== "All Tools")}
-        availableTags={SKILL_TAGS}
+        availableTags={skillTags}
       />
 
       <Modal

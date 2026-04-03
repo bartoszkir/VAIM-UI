@@ -20,7 +20,13 @@ export class HttpError extends Error {
 }
 
 export type HttpRequestOptions = RequestInit;
-export type HttpRequestConfig = Omit<RequestInit, "method">;
+export type HttpQueryParam = string | number | boolean | null | undefined;
+
+export type HttpQueryParams = Record<string, HttpQueryParam | HttpQueryParam[]>;
+
+export type HttpRequestConfig = Omit<RequestInit, "method"> & {
+  query?: HttpQueryParams;
+};
 
 class HttpClient {
   private readonly baseUrl: string;
@@ -29,9 +35,28 @@ class HttpClient {
     this.baseUrl = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
   }
 
-  private toAbsoluteUrl(path: string): string {
+  private toAbsoluteUrl(path: string, query?: HttpQueryParams): string {
     const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-    return `${this.baseUrl}${normalizedPath}`;
+    const url = new URL(`${this.baseUrl}${normalizedPath}`);
+
+    if (query) {
+      for (const [key, value] of Object.entries(query)) {
+        if (value == null) {
+          continue;
+        }
+
+        const values = Array.isArray(value) ? value : [value];
+        for (const item of values) {
+          if (item == null) {
+            continue;
+          }
+
+          url.searchParams.append(key, String(item));
+        }
+      }
+    }
+
+    return url.toString();
   }
 
   private async parseResponseBody(response: Response): Promise<unknown> {
@@ -69,9 +94,10 @@ class HttpClient {
     path: string,
     options: HttpRequestConfig = {},
   ): Promise<T> {
-    const url = this.toAbsoluteUrl(path);
+    const { query, ...requestOptions } = options;
+    const url = this.toAbsoluteUrl(path, query);
     const response = await fetch(url, {
-      ...options,
+      ...requestOptions,
       method,
     });
     const body = await this.parseResponseBody(response);

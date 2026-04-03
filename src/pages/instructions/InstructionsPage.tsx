@@ -1,89 +1,104 @@
 import { useMemo, useState } from "react";
-import { Box, Button, Grid, Heading, Modal, P } from "@veracity/vui";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import {
+  Box,
+  Button,
+  Grid,
+  Heading,
+  Modal,
+  P,
+  Spinner,
+  Tag,
+} from "@veracity/vui";
+import { getPagedPrompts } from "../../api/prompts";
+import { getTags } from "../../api/tags";
+import { PromptType } from "../../api/types";
 import type { ArtifactItem } from "../../shared/types/artifacts";
 import ArtifactPageHeader from "../../shared/components/ArtifactPageHeader";
 import ArtifactCard from "../../shared/components/ArtifactCard";
 import ArtifactSearchFiltersCard from "../../shared/components/ArtifactSearchFiltersCard";
+import { useBottomReach } from "../../shared/hooks/useBottomReach";
+import { artifactFromPrompt } from "../../shared/utils/artifactFromPrompt";
 
 const TOOL_FILTERS = ["All Tools", "GitHub Copilot", "Claude Code"];
-const INSTRUCTION_TAGS = [
-  "frontend",
-  "backend",
-  "security",
-  "testing",
-  "review",
-  "deployment",
-];
-
-const INSTRUCTIONS: ArtifactItem[] = [
-  {
-    id: "frontend-vui-instructions",
-    title: "Frontend VUI Instructions",
-    author: "UI Foundation Team",
-    publishedAt: "2026-03-19T00:00:00.000Z",
-    description:
-      "Implementation guidance for composing accessible and consistent UIs with VUI primitives.",
-    tools: ["GitHub Copilot", "Claude Code"],
-    tags: ["frontend", "accessibility", "review"],
-    favorites: 286,
-    isFavorite: true,
-    comments: 31,
-    updatedAt: "2026-03-26T00:00:00.000Z",
-  },
-  {
-    id: "secure-api-change-instructions",
-    title: "Secure API Change Instructions",
-    author: "Security Guild",
-    publishedAt: "2026-03-24T00:00:00.000Z",
-    description:
-      "Step-by-step instruction template for secure API modifications and validation.",
-    tools: ["GitHub Copilot"],
-    tags: ["backend", "security", "testing"],
-    favorites: 201,
-    isFavorite: false,
-    comments: 17,
-    updatedAt: "2026-03-29T00:00:00.000Z",
-  },
-  {
-    id: "release-readiness-instructions",
-    title: "Release Readiness Instructions",
-    author: "Release Engineering",
-    publishedAt: "2026-03-26T00:00:00.000Z",
-    description:
-      "Checklist-first instruction set for release criteria, rollback plans, and monitoring.",
-    tools: ["Claude Code"],
-    tags: ["deployment", "review", "operations"],
-    favorites: 175,
-    isFavorite: false,
-    comments: 13,
-    updatedAt: "2026-03-30T00:00:00.000Z",
-  },
-];
+const PAGE_SIZE = 12;
 
 export default function InstructionsPage() {
   const [searchValue, setSearchValue] = useState("");
+  const [activeTool, setActiveTool] = useState(TOOL_FILTERS[0]);
+  const [activeTag, setActiveTag] = useState<string | null>(null);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [selectedInstruction, setSelectedInstruction] =
     useState<ArtifactItem | null>(null);
 
-  const visibleInstructions = useMemo(() => {
-    const query = searchValue.trim().toLowerCase();
-    if (!query) {
-      return INSTRUCTIONS;
+  const tagsQuery = useQuery({
+    queryKey: ["artifact-tags"],
+    queryFn: getTags,
+  });
+
+  const instructionsQuery = useInfiniteQuery({
+    queryKey: [
+      "artifacts",
+      PromptType.Instruction,
+      searchValue,
+      activeTool,
+      activeTag,
+    ],
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) =>
+      getPagedPrompts({
+        page: pageParam,
+        pageSize: PAGE_SIZE,
+        type: PromptType.Instruction,
+        search: searchValue.trim() || undefined,
+        tool: activeTool === "All Tools" ? undefined : activeTool,
+        tag: activeTag ?? undefined,
+      }),
+    getNextPageParam: (lastPage, allPages) => {
+      const loadedCount = allPages.reduce(
+        (sum, page) => sum + (page.items?.length ?? 0),
+        0,
+      );
+
+      if (loadedCount >= lastPage.totalCount) {
+        return undefined;
+      }
+
+      return lastPage.page + 1;
+    },
+  });
+
+  const visibleInstructions = useMemo(
+    () =>
+      instructionsQuery.data?.pages
+        .flatMap((page) => page.items ?? [])
+        .map(artifactFromPrompt) ?? [],
+    [instructionsQuery.data],
+  );
+
+  const instructionTags = useMemo(
+    () =>
+      (tagsQuery.data ?? [])
+        .map((tag) => tag.name?.trim())
+        .filter((name): name is string => Boolean(name)),
+    [tagsQuery.data],
+  );
+
+  const handleLoadMore = () => {
+    if (
+      !instructionsQuery.hasNextPage ||
+      instructionsQuery.isFetchingNextPage
+    ) {
+      return;
     }
 
-    return INSTRUCTIONS.filter((instruction) => {
-      const haystack = [
-        instruction.title,
-        instruction.author,
-        instruction.description,
-        ...instruction.tags,
-      ]
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(query);
-    });
-  }, [searchValue]);
+    void instructionsQuery.fetchNextPage();
+  };
+
+  const loadMoreRef = useBottomReach({
+    enabled: Boolean(instructionsQuery.hasNextPage),
+    onReachBottom: handleLoadMore,
+  });
 
   return (
     <Box column w={1} p={{ xs: 3, md: 4 }} gap={3}>
@@ -101,23 +116,69 @@ export default function InstructionsPage() {
         searchValue={searchValue}
         onSearchChange={setSearchValue}
         toolFilters={TOOL_FILTERS}
-        activeTool={TOOL_FILTERS[0]}
-        tags={INSTRUCTION_TAGS}
+        activeTool={activeTool}
+        onToolChange={setActiveTool}
+        tags={instructionTags}
+        activeTag={activeTag ?? undefined}
+        onTagChange={setActiveTag}
       />
 
-      <Grid
-        w={1}
-        gap={3}
-        gridTemplateColumns={{ sm: "1fr", md: "1fr 1fr", lg: "1fr 1fr" }}
-      >
-        {visibleInstructions.map((instruction) => (
-          <ArtifactCard
-            key={instruction.id}
-            artifact={instruction}
-            onViewDetails={setSelectedInstruction}
-          />
-        ))}
-      </Grid>
+      {instructionsQuery.isPending ? (
+        <Box w={1} justifyContent="center" py={6}>
+          <Spinner aria-label="Loading instructions" />
+        </Box>
+      ) : instructionsQuery.isError ? (
+        <Box column w={1} gap={2} alignItems="center" py={6}>
+          <P color="error.text">Unable to load instructions right now.</P>
+          <Button
+            variant="secondaryDark"
+            onClick={() => void instructionsQuery.refetch()}
+          >
+            Retry
+          </Button>
+        </Box>
+      ) : visibleInstructions.length === 0 ? (
+        <Box column w={1} alignItems="center" gap={2} py={6}>
+          <P color="neutral.textSecondary">
+            No instructions match your filters yet.
+          </P>
+        </Box>
+      ) : (
+        <>
+          <Grid
+            w={1}
+            gap={3}
+            gridTemplateColumns={{ sm: "1fr", md: "1fr 1fr", lg: "1fr 1fr" }}
+          >
+            {visibleInstructions.map((instruction) => (
+              <ArtifactCard
+                key={instruction.id}
+                artifact={instruction}
+                onViewDetails={setSelectedInstruction}
+              />
+            ))}
+          </Grid>
+
+          {activeTag ? (
+            <Box w={1} alignItems="center" gap={2}>
+              <P color="neutral.textSecondary">Filtering by tag:</P>
+              <Tag
+                text={activeTag}
+                variant="subtleBlue"
+                isInteractive
+                onClick={() => setActiveTag(null)}
+              />
+            </Box>
+          ) : null}
+
+          <div ref={loadMoreRef} />
+          {instructionsQuery.isFetchingNextPage ? (
+            <Box w={1} justifyContent="center" py={3}>
+              <Spinner aria-label="Loading more instructions" />
+            </Box>
+          ) : null}
+        </>
+      )}
 
       <Modal
         isOpen={isUploadModalOpen}

@@ -1,90 +1,102 @@
 import { useMemo, useState } from "react";
-import { Box, Button, Grid, Heading, Modal, P } from "@veracity/vui";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import {
+  Box,
+  Button,
+  Grid,
+  Heading,
+  Modal,
+  P,
+  Spinner,
+  Tag,
+} from "@veracity/vui";
+import { getPagedPrompts } from "../../api/prompts";
+import { getTags } from "../../api/tags";
+import { PromptType } from "../../api/types";
 import type { ArtifactItem } from "../../shared/types/artifacts";
 import ArtifactPageHeader from "../../shared/components/ArtifactPageHeader";
 import ArtifactSearchFiltersCard from "../../shared/components/ArtifactSearchFiltersCard";
 import ArtifactCard from "../../shared/components/ArtifactCard";
+import { useBottomReach } from "../../shared/hooks/useBottomReach";
+import { artifactFromPrompt } from "../../shared/utils/artifactFromPrompt";
 
 const TOOL_FILTERS = ["All Tools", "GitHub Copilot", "Claude Code"];
-const PROMPT_TAGS = [
-  "architecture",
-  "debugging",
-  "refactoring",
-  "testing",
-  "docs",
-  "security",
-];
-
-const PROMPTS: ArtifactItem[] = [
-  {
-    id: "architecture-review-prompt",
-    title: "Architecture Review Prompt",
-    author: "Engineering Ops",
-    publishedAt: "2026-03-23T00:00:00.000Z",
-    description:
-      "A structured prompt for identifying coupling issues and modularization opportunities.",
-    tools: ["GitHub Copilot", "Claude Code"],
-    tags: ["architecture", "refactoring", "analysis"],
-    favorites: 219,
-    isFavorite: true,
-    comments: 25,
-    updatedAt: "2026-03-29T00:00:00.000Z",
-  },
-  {
-    id: "incident-postmortem-prompt",
-    title: "Incident Postmortem Prompt",
-    author: "SRE Team",
-    publishedAt: "2026-03-20T00:00:00.000Z",
-    description:
-      "Generates consistent postmortem drafts with timelines, impact summaries, and actions.",
-    tools: ["Claude Code"],
-    tags: ["docs", "debugging", "workflow"],
-    favorites: 164,
-    isFavorite: false,
-    comments: 16,
-    updatedAt: "2026-03-27T00:00:00.000Z",
-  },
-  {
-    id: "api-contract-test-prompt",
-    title: "API Contract Test Prompt",
-    author: "Platform QA",
-    publishedAt: "2026-03-28T00:00:00.000Z",
-    description:
-      "Creates API contract test scenarios from endpoint docs and schema definitions.",
-    tools: ["GitHub Copilot"],
-    tags: ["testing", "security", "api"],
-    favorites: 183,
-    isFavorite: false,
-    comments: 12,
-    updatedAt: "2026-03-30T00:00:00.000Z",
-  },
-];
+const PAGE_SIZE = 12;
 
 export default function PromptsPage() {
   const [searchValue, setSearchValue] = useState("");
+  const [activeTool, setActiveTool] = useState(TOOL_FILTERS[0]);
+  const [activeTag, setActiveTag] = useState<string | null>(null);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [selectedPrompt, setSelectedPrompt] = useState<ArtifactItem | null>(
     null,
   );
 
-  const visiblePrompts = useMemo(() => {
-    const query = searchValue.trim().toLowerCase();
-    if (!query) {
-      return PROMPTS;
+  const tagsQuery = useQuery({
+    queryKey: ["artifact-tags"],
+    queryFn: getTags,
+  });
+
+  const promptsQuery = useInfiniteQuery({
+    queryKey: [
+      "artifacts",
+      PromptType.Prompt,
+      searchValue,
+      activeTool,
+      activeTag,
+    ],
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) =>
+      getPagedPrompts({
+        page: pageParam,
+        pageSize: PAGE_SIZE,
+        type: PromptType.Prompt,
+        search: searchValue.trim() || undefined,
+        tool: activeTool === "All Tools" ? undefined : activeTool,
+        tag: activeTag ?? undefined,
+      }),
+    getNextPageParam: (lastPage, allPages) => {
+      const loadedCount = allPages.reduce(
+        (sum, page) => sum + (page.items?.length ?? 0),
+        0,
+      );
+
+      if (loadedCount >= lastPage.totalCount) {
+        return undefined;
+      }
+
+      return lastPage.page + 1;
+    },
+  });
+
+  const visiblePrompts = useMemo(
+    () =>
+      promptsQuery.data?.pages
+        .flatMap((page) => page.items ?? [])
+        .map(artifactFromPrompt) ?? [],
+    [promptsQuery.data],
+  );
+
+  const promptTags = useMemo(
+    () =>
+      (tagsQuery.data ?? [])
+        .map((tag) => tag.name?.trim())
+        .filter((name): name is string => Boolean(name)),
+    [tagsQuery.data],
+  );
+
+  const handleLoadMore = () => {
+    if (!promptsQuery.hasNextPage || promptsQuery.isFetchingNextPage) {
+      return;
     }
 
-    return PROMPTS.filter((prompt) => {
-      const haystack = [
-        prompt.title,
-        prompt.author,
-        prompt.description,
-        ...prompt.tags,
-      ]
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(query);
-    });
-  }, [searchValue]);
+    void promptsQuery.fetchNextPage();
+  };
+
+  const loadMoreRef = useBottomReach({
+    enabled: Boolean(promptsQuery.hasNextPage),
+    onReachBottom: handleLoadMore,
+  });
 
   return (
     <Box column w={1} p={{ xs: 3, md: 4 }} gap={3}>
@@ -102,23 +114,69 @@ export default function PromptsPage() {
         searchValue={searchValue}
         onSearchChange={setSearchValue}
         toolFilters={TOOL_FILTERS}
-        activeTool={TOOL_FILTERS[0]}
-        tags={PROMPT_TAGS}
+        activeTool={activeTool}
+        onToolChange={setActiveTool}
+        tags={promptTags}
+        activeTag={activeTag ?? undefined}
+        onTagChange={setActiveTag}
       />
 
-      <Grid
-        w={1}
-        gap={3}
-        gridTemplateColumns={{ sm: "1fr", md: "1fr 1fr", lg: "1fr 1fr" }}
-      >
-        {visiblePrompts.map((prompt) => (
-          <ArtifactCard
-            key={prompt.id}
-            artifact={prompt}
-            onViewDetails={setSelectedPrompt}
-          />
-        ))}
-      </Grid>
+      {promptsQuery.isPending ? (
+        <Box w={1} justifyContent="center" py={6}>
+          <Spinner aria-label="Loading prompts" />
+        </Box>
+      ) : promptsQuery.isError ? (
+        <Box column w={1} gap={2} alignItems="center" py={6}>
+          <P color="error.text">Unable to load prompts right now.</P>
+          <Button
+            variant="secondaryDark"
+            onClick={() => void promptsQuery.refetch()}
+          >
+            Retry
+          </Button>
+        </Box>
+      ) : visiblePrompts.length === 0 ? (
+        <Box column w={1} alignItems="center" gap={2} py={6}>
+          <P color="neutral.textSecondary">
+            No prompts match your filters yet.
+          </P>
+        </Box>
+      ) : (
+        <>
+          <Grid
+            w={1}
+            gap={3}
+            gridTemplateColumns={{ sm: "1fr", md: "1fr 1fr", lg: "1fr 1fr" }}
+          >
+            {visiblePrompts.map((prompt) => (
+              <ArtifactCard
+                key={prompt.id}
+                artifact={prompt}
+                onViewDetails={setSelectedPrompt}
+              />
+            ))}
+          </Grid>
+
+          {activeTag ? (
+            <Box w={1} alignItems="center" gap={2}>
+              <P color="neutral.textSecondary">Filtering by tag:</P>
+              <Tag
+                text={activeTag}
+                variant="subtleBlue"
+                isInteractive
+                onClick={() => setActiveTag(null)}
+              />
+            </Box>
+          ) : null}
+
+          <div ref={loadMoreRef} />
+          {promptsQuery.isFetchingNextPage ? (
+            <Box w={1} justifyContent="center" py={3}>
+              <Spinner aria-label="Loading more prompts" />
+            </Box>
+          ) : null}
+        </>
+      )}
 
       <Modal
         isOpen={isUploadModalOpen}

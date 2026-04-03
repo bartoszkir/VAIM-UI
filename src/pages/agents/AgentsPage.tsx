@@ -1,88 +1,100 @@
 import { useMemo, useState } from "react";
-import { Box, Button, Grid, Heading, Modal, P } from "@veracity/vui";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import {
+  Box,
+  Button,
+  Grid,
+  Heading,
+  Modal,
+  P,
+  Spinner,
+  Tag,
+} from "@veracity/vui";
+import { getPagedPrompts } from "../../api/prompts";
+import { getTags } from "../../api/tags";
+import { PromptType } from "../../api/types";
 import type { ArtifactItem } from "../../shared/types/artifacts";
 import ArtifactCard from "../../shared/components/ArtifactCard";
 import ArtifactPageHeader from "../../shared/components/ArtifactPageHeader";
 import ArtifactSearchFiltersCard from "../../shared/components/ArtifactSearchFiltersCard";
+import { useBottomReach } from "../../shared/hooks/useBottomReach";
+import { artifactFromPrompt } from "../../shared/utils/artifactFromPrompt";
 
 const TOOL_FILTERS = ["All Tools", "GitHub Copilot", "Claude Code"];
-const AGENT_TAGS = [
-  "automation",
-  "analysis",
-  "productivity",
-  "workflow",
-  "documentation",
-  "testing",
-];
-
-const AGENTS: ArtifactItem[] = [
-  {
-    id: "codebase-explorer-agent",
-    title: "Codebase Explorer Agent",
-    author: "Platform Team",
-    publishedAt: "2026-03-27T00:00:00.000Z",
-    description:
-      "A guided agent profile for fast repository discovery and architecture mapping.",
-    tools: ["GitHub Copilot", "Claude Code"],
-    tags: ["analysis", "workflow", "documentation"],
-    favorites: 192,
-    isFavorite: false,
-    comments: 14,
-    updatedAt: "2026-03-30T00:00:00.000Z",
-  },
-  {
-    id: "release-notes-agent",
-    title: "Release Notes Agent",
-    author: "DevOps Guild",
-    publishedAt: "2026-03-22T00:00:00.000Z",
-    description:
-      "Automates release-note generation from commits, pull requests, and issue links.",
-    tools: ["GitHub Copilot"],
-    tags: ["automation", "documentation", "devops"],
-    favorites: 141,
-    isFavorite: true,
-    comments: 11,
-    updatedAt: "2026-03-29T00:00:00.000Z",
-  },
-  {
-    id: "qa-regression-agent",
-    title: "QA Regression Agent",
-    author: "Quality Team",
-    publishedAt: "2026-03-25T00:00:00.000Z",
-    description:
-      "Builds targeted regression checklists based on changed files and test history.",
-    tools: ["Claude Code"],
-    tags: ["testing", "analysis", "productivity"],
-    favorites: 167,
-    isFavorite: false,
-    comments: 19,
-    updatedAt: "2026-03-28T00:00:00.000Z",
-  },
-];
+const PAGE_SIZE = 12;
 
 export default function AgentsPage() {
   const [searchValue, setSearchValue] = useState("");
+  const [activeTool, setActiveTool] = useState(TOOL_FILTERS[0]);
+  const [activeTag, setActiveTag] = useState<string | null>(null);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<ArtifactItem | null>(null);
 
-  const visibleAgents = useMemo(() => {
-    const query = searchValue.trim().toLowerCase();
-    if (!query) {
-      return AGENTS;
+  const tagsQuery = useQuery({
+    queryKey: ["artifact-tags"],
+    queryFn: getTags,
+  });
+
+  const agentsQuery = useInfiniteQuery({
+    queryKey: [
+      "artifacts",
+      PromptType.Agent,
+      searchValue,
+      activeTool,
+      activeTag,
+    ],
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) =>
+      getPagedPrompts({
+        page: pageParam,
+        pageSize: PAGE_SIZE,
+        type: PromptType.Agent,
+        search: searchValue.trim() || undefined,
+        tool: activeTool === "All Tools" ? undefined : activeTool,
+        tag: activeTag ?? undefined,
+      }),
+    getNextPageParam: (lastPage, allPages) => {
+      const loadedCount = allPages.reduce(
+        (sum, page) => sum + (page.items?.length ?? 0),
+        0,
+      );
+
+      if (loadedCount >= lastPage.totalCount) {
+        return undefined;
+      }
+
+      return lastPage.page + 1;
+    },
+  });
+
+  const visibleAgents = useMemo(
+    () =>
+      agentsQuery.data?.pages
+        .flatMap((page) => page.items ?? [])
+        .map(artifactFromPrompt) ?? [],
+    [agentsQuery.data],
+  );
+
+  const agentTags = useMemo(
+    () =>
+      (tagsQuery.data ?? [])
+        .map((tag) => tag.name?.trim())
+        .filter((name): name is string => Boolean(name)),
+    [tagsQuery.data],
+  );
+
+  const handleLoadMore = () => {
+    if (!agentsQuery.hasNextPage || agentsQuery.isFetchingNextPage) {
+      return;
     }
 
-    return AGENTS.filter((agent) => {
-      const haystack = [
-        agent.title,
-        agent.author,
-        agent.description,
-        ...agent.tags,
-      ]
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(query);
-    });
-  }, [searchValue]);
+    void agentsQuery.fetchNextPage();
+  };
+
+  const loadMoreRef = useBottomReach({
+    enabled: Boolean(agentsQuery.hasNextPage),
+    onReachBottom: handleLoadMore,
+  });
 
   return (
     <Box column w={1} p={{ xs: 3, md: 4 }} gap={3}>
@@ -100,24 +112,68 @@ export default function AgentsPage() {
         searchValue={searchValue}
         onSearchChange={setSearchValue}
         toolFilters={TOOL_FILTERS}
-        activeTool={TOOL_FILTERS[0]}
-        tags={AGENT_TAGS}
+        activeTool={activeTool}
+        onToolChange={setActiveTool}
+        tags={agentTags}
+        activeTag={activeTag ?? undefined}
+        onTagChange={setActiveTag}
       />
 
-      <Grid
-        w={1}
-        gap={3}
-        gridTemplateColumns={{ sm: "1fr", md: "1fr 1fr", lg: "1fr 1fr" }}
-      >
-        {visibleAgents.map((agent) => (
-          <ArtifactCard
-            key={agent.id}
-            artifact={agent}
-            onViewDetails={setSelectedAgent}
-            viewDetailsLabel="View profile"
-          />
-        ))}
-      </Grid>
+      {agentsQuery.isPending ? (
+        <Box w={1} justifyContent="center" py={6}>
+          <Spinner aria-label="Loading agents" />
+        </Box>
+      ) : agentsQuery.isError ? (
+        <Box column w={1} gap={2} alignItems="center" py={6}>
+          <P color="error.text">Unable to load agents right now.</P>
+          <Button
+            variant="secondaryDark"
+            onClick={() => void agentsQuery.refetch()}
+          >
+            Retry
+          </Button>
+        </Box>
+      ) : visibleAgents.length === 0 ? (
+        <Box column w={1} alignItems="center" gap={2} py={6}>
+          <P color="neutral.textSecondary">No agents match your filters yet.</P>
+        </Box>
+      ) : (
+        <>
+          <Grid
+            w={1}
+            gap={3}
+            gridTemplateColumns={{ sm: "1fr", md: "1fr 1fr", lg: "1fr 1fr" }}
+          >
+            {visibleAgents.map((agent) => (
+              <ArtifactCard
+                key={agent.id}
+                artifact={agent}
+                onViewDetails={setSelectedAgent}
+                viewDetailsLabel="View profile"
+              />
+            ))}
+          </Grid>
+
+          {activeTag ? (
+            <Box w={1} alignItems="center" gap={2}>
+              <P color="neutral.textSecondary">Filtering by tag:</P>
+              <Tag
+                text={activeTag}
+                variant="subtleBlue"
+                isInteractive
+                onClick={() => setActiveTag(null)}
+              />
+            </Box>
+          ) : null}
+
+          <div ref={loadMoreRef} />
+          {agentsQuery.isFetchingNextPage ? (
+            <Box w={1} justifyContent="center" py={3}>
+              <Spinner aria-label="Loading more agents" />
+            </Box>
+          ) : null}
+        </>
+      )}
 
       <Modal
         isOpen={isUploadModalOpen}
