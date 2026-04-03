@@ -4,11 +4,14 @@ import {
   Box,
   Grid,
   Heading,
+  Input,
+  Label,
   Modal,
   P,
   Button,
   Spinner,
   Tag,
+  Textarea,
 } from "@veracity/vui";
 import { getPagedPrompts } from "../../api/prompts";
 import { getTags } from "../../api/tags";
@@ -25,6 +28,11 @@ const TOOL_FILTERS = ["All Tools", "GitHub Copilot", "Claude Code"];
 const PAGE_SIZE = 12;
 
 export default function SkillsPage() {
+  const [editingSkill, setEditingSkill] = useState<{
+    title: string;
+    description: string;
+    content: string;
+  } | null>(null);
   const [searchValue, setSearchValue] = useState("");
   const [activeTool, setActiveTool] = useState(TOOL_FILTERS[0]);
   const [activeTag, setActiveTag] = useState<string | null>(null);
@@ -81,6 +89,14 @@ export default function SkillsPage() {
       (tagsQuery.data ?? [])
         .map((tag) => tag.name?.trim())
         .filter((name): name is string => Boolean(name)),
+    [tagsQuery.data],
+  );
+
+  const skillTagOptions = useMemo(
+    () =>
+      (tagsQuery.data ?? [])
+        .map((tag) => ({ id: tag.id, name: tag.name?.trim() ?? "" }))
+        .filter((tag) => Boolean(tag.name)),
     [tagsQuery.data],
   );
 
@@ -178,10 +194,87 @@ export default function SkillsPage() {
       <UploadArtifactModal
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
+        artifactType={PromptType.Skill}
         artifactLabel="Skill"
         availableTools={TOOL_FILTERS.filter((tool) => tool !== "All Tools")}
-        availableTags={skillTags}
+        availableTags={skillTagOptions}
+        onAfterCreate={async ({ mode, artifact }) => {
+          await skillsQuery.refetch();
+
+          if (mode === "markdown") {
+            setEditingSkill({
+              title: artifact.name?.trim() ?? "",
+              description: artifact.description?.trim() ?? "",
+              content: artifact.content?.trim() ?? "",
+            });
+          }
+        }}
       />
+
+      <Modal
+        isOpen={Boolean(editingSkill)}
+        onClose={() => setEditingSkill(null)}
+        aria-labelledby="skill-edit-modal-title"
+      >
+        <Box column gap={3} p={4}>
+          <Heading id="skill-edit-modal-title" as="h2">
+            Edit Skill
+          </Heading>
+
+          <Box column gap={1}>
+            <Label htmlFor="skill-edit-title" text="Title" />
+            <Input
+              id="skill-edit-title"
+              value={editingSkill?.title ?? ""}
+              onChange={(event) =>
+                setEditingSkill((prev) =>
+                  prev ? { ...prev, title: event.target.value } : prev,
+                )
+              }
+            />
+          </Box>
+
+          <Box column gap={1}>
+            <Label htmlFor="skill-edit-description" text="Description" />
+            <Textarea
+              id="skill-edit-description"
+              rows={3}
+              value={editingSkill?.description ?? ""}
+              onChange={(event) =>
+                setEditingSkill((prev) =>
+                  prev ? { ...prev, description: event.target.value } : prev,
+                )
+              }
+            />
+          </Box>
+
+          <Box column gap={1}>
+            <Label htmlFor="skill-edit-content" text="Content" />
+            <Textarea
+              id="skill-edit-content"
+              rows={6}
+              value={editingSkill?.content ?? ""}
+              onChange={(event) =>
+                setEditingSkill((prev) =>
+                  prev ? { ...prev, content: event.target.value } : prev,
+                )
+              }
+            />
+          </Box>
+
+          <Box w={1} justifyContent="flex-end" gap={2}>
+            <Button
+              variant="secondaryDark"
+              onClick={() => setEditingSkill(null)}
+            >
+              Cancel
+            </Button>
+            <Button variant="primaryDark" onClick={() => setEditingSkill(null)}>
+              Save
+            </Button>
+          </Box>
+        </Box>
+      </Modal>
 
       <Modal
         isOpen={Boolean(selectedSkill)}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Modal,
   Box,
@@ -9,64 +9,205 @@ import {
   T,
   Tag,
   Button,
+  P,
 } from "@veracity/vui";
 import { useToast } from "@veracity/vui";
+import { createPrompt, createPromptFromMarkdown } from "../../api/prompts";
+import { HttpError } from "../../api/httpClient";
+import type { PromptDto, PromptType } from "../../api/types";
+
+const UploadMode = {
+  Manual: "manual",
+  Markdown: "markdown",
+} as const;
+
+type UploadMode = (typeof UploadMode)[keyof typeof UploadMode];
+
+type ArtifactTag = {
+  id: string;
+  name: string;
+};
+
+type UploadAfterCreatePayload = {
+  mode: UploadMode;
+  artifact: PromptDto;
+};
 
 type UploadArtifactModalProps = {
   isOpen: boolean;
   onClose: () => void;
+  artifactType: PromptType;
   artifactLabel: string;
   availableTools: string[];
-  availableTags: string[];
+  availableTags: Array<string | ArtifactTag>;
+  onAfterCreate?: (payload: UploadAfterCreatePayload) => void | Promise<void>;
 };
 
 export default function UploadArtifactModal({
   isOpen,
   onClose,
+  artifactType,
   artifactLabel,
   availableTools,
   availableTags,
+  onAfterCreate,
 }: UploadArtifactModalProps) {
   const { showSuccess } = useToast();
   const prevIsOpenRef = useRef(isOpen);
 
+  const [uploadMode, setUploadMode] = useState<UploadMode>(UploadMode.Manual);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [content, setContent] = useState("");
   const [selectedTools, setSelectedTools] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [markdownFile, setMarkdownFile] = useState<File | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Reset form when modal closes (transitions from open to closed)
+  const normalizedTags: ArtifactTag[] = availableTags.map((tag) =>
+    typeof tag === "string" ? { id: tag, name: tag } : tag,
+  );
+
+  const resetUploadForm = () => {
+    setUploadMode(UploadMode.Manual);
+    setTitle("");
+    setDescription("");
+    setContent("");
+    setSelectedTools([]);
+    setSelectedTags([]);
+    setMarkdownFile(null);
+    setSubmitError(null);
+    setIsSubmitting(false);
+  };
+
   useEffect(() => {
     if (prevIsOpenRef.current && !isOpen) {
-      // Transitioning from open to closed - reset form
-      const resetForm = () => {
-        setTitle("");
-        setDescription("");
-        setContent("");
-        setSelectedTools([]);
-        setSelectedTags([]);
-      };
-      resetForm();
+      resetUploadForm();
     }
+
     prevIsOpenRef.current = isOpen;
   }, [isOpen]);
 
+  useEffect(() => {
+    setSubmitError(null);
+  }, [uploadMode]);
+
+  const getErrorMessage = (error: unknown) => {
+    if (error instanceof HttpError) {
+      return error.message;
+    }
+
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    return "Unable to upload artifact right now.";
+  };
+
   const handleToggleTool = (tool: string) => {
     setSelectedTools((prev) =>
-      prev.includes(tool) ? prev.filter((t) => t !== tool) : [...prev, tool],
+      prev.includes(tool)
+        ? prev.filter((value) => value !== tool)
+        : [...prev, tool],
     );
   };
 
-  const handleToggleTag = (tag: string) => {
+  const handleToggleTag = (tagId: string) => {
     setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+      prev.includes(tagId)
+        ? prev.filter((value) => value !== tagId)
+        : [...prev, tagId],
     );
   };
 
-  const handleUpload = () => {
-    showSuccess(`${artifactLabel} uploaded successfully`);
-    onClose();
+  const handleManualUpload = async () => {
+    if (!title.trim()) {
+      setSubmitError("Title is required.");
+      return;
+    }
+
+    if (!content.trim()) {
+      setSubmitError("Content is required.");
+      return;
+    }
+
+    setSubmitError(null);
+    setIsSubmitting(true);
+
+    try {
+      const createdArtifact = await createPrompt({
+        name: title.trim(),
+        description: description.trim() || null,
+        content: content.trim(),
+        type: artifactType,
+        tagIds: selectedTags.length > 0 ? selectedTags : null,
+      });
+
+      if (onAfterCreate) {
+        await onAfterCreate({
+          mode: UploadMode.Manual,
+          artifact: createdArtifact,
+        });
+      }
+
+      showSuccess(`${artifactLabel} uploaded successfully`);
+      onClose();
+    } catch (error) {
+      setSubmitError(getErrorMessage(error));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleMarkdownUpload = async () => {
+    if (!markdownFile) {
+      setSubmitError("Select a markdown file to continue.");
+      return;
+    }
+
+    setSubmitError(null);
+    setIsSubmitting(true);
+
+    try {
+      const markdownText = await markdownFile.text();
+      if (!markdownText.trim()) {
+        setSubmitError("Markdown file is empty.");
+        return;
+      }
+
+      const createdArtifact = await createPromptFromMarkdown({
+        markdownText,
+        type: artifactType,
+      });
+
+      if (onAfterCreate) {
+        await onAfterCreate({
+          mode: UploadMode.Markdown,
+          artifact: createdArtifact,
+        });
+      }
+
+      showSuccess(`${artifactLabel} created from markdown`);
+      onClose();
+    } catch (error) {
+      setSubmitError(getErrorMessage(error));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (isSubmitting) {
+      return;
+    }
+
+    if (uploadMode === UploadMode.Markdown) {
+      await handleMarkdownUpload();
+      return;
+    }
+
+    await handleManualUpload();
   };
 
   return (
@@ -94,85 +235,144 @@ export default function UploadArtifactModal({
         >
           Upload New {artifactLabel}
         </Heading>
+
         <Box column overflow="auto" gap={3} py={2} px={2}>
-          {/* Title field */}
-          <Box column gap={1}>
-            <Label htmlFor="upload-title" text="Title" />
-            <Input
-              id="upload-title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Enter a descriptive title"
-            />
-          </Box>
-
-          {/* Description field */}
-          <Box column gap={1}>
-            <Label htmlFor="upload-description" text="Description" />
-            <Textarea
-              id="upload-description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe what this artifact does and when to use it"
-              rows={3}
-            />
-          </Box>
-
-          {/* Content field */}
-          <Box column gap={1}>
-            <Label htmlFor="upload-content" text="Content / Instructions" />
-            <Textarea
-              id="upload-content"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Paste your artifact content here..."
-              rows={5}
-            />
-          </Box>
-
-          {/* Compatible AI Tools */}
           <Box column gap={1.5}>
-            <T fontWeight="semibold">Compatible AI Tools</T>
+            <T fontWeight="semibold">Creation Mode</T>
             <Box w={1} flexWrap="wrap" gap={1.5}>
-              {availableTools.map((tool) => (
-                <Tag
-                  key={tool}
-                  text={tool}
-                  isInteractive
-                  onClick={() => handleToggleTool(tool)}
-                  variant={
-                    selectedTools.includes(tool) ? "subtleBlue" : "subtleGrey"
-                  }
-                />
-              ))}
+              <Tag
+                text="Manual form"
+                isInteractive
+                onClick={() => setUploadMode(UploadMode.Manual)}
+                variant={
+                  uploadMode === UploadMode.Manual ? "subtleBlue" : "subtleGrey"
+                }
+              />
+              <Tag
+                text="Markdown file"
+                isInteractive
+                onClick={() => setUploadMode(UploadMode.Markdown)}
+                variant={
+                  uploadMode === UploadMode.Markdown
+                    ? "subtleBlue"
+                    : "subtleGrey"
+                }
+              />
             </Box>
           </Box>
 
-          {/* Tags */}
-          <Box column gap={1.5}>
-            <T fontWeight="semibold">Tags</T>
-            <Box w={1} flexWrap="wrap" gap={1.5}>
-              {availableTags.map((tag) => (
-                <Tag
-                  key={tag}
-                  text={tag}
-                  isInteractive
-                  onClick={() => handleToggleTag(tag)}
-                  variant={
-                    selectedTags.includes(tag) ? "subtleBlue" : "subtleGrey"
-                  }
+          {uploadMode === UploadMode.Manual ? (
+            <>
+              <Box column gap={1}>
+                <Label htmlFor="upload-title" text="Title" />
+                <Input
+                  id="upload-title"
+                  value={title}
+                  onChange={(event) => setTitle(event.target.value)}
+                  placeholder="Enter a descriptive title"
                 />
-              ))}
+              </Box>
+
+              <Box column gap={1}>
+                <Label htmlFor="upload-description" text="Description" />
+                <Textarea
+                  id="upload-description"
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                  placeholder="Describe what this artifact does and when to use it"
+                  rows={3}
+                />
+              </Box>
+
+              <Box column gap={1}>
+                <Label htmlFor="upload-content" text="Content / Instructions" />
+                <Textarea
+                  id="upload-content"
+                  value={content}
+                  onChange={(event) => setContent(event.target.value)}
+                  placeholder="Paste your artifact content here..."
+                  rows={5}
+                />
+              </Box>
+
+              <Box column gap={1.5}>
+                <T fontWeight="semibold">Compatible AI Tools</T>
+                <Box w={1} flexWrap="wrap" gap={1.5}>
+                  {availableTools.map((tool) => (
+                    <Tag
+                      key={tool}
+                      text={tool}
+                      isInteractive
+                      onClick={() => handleToggleTool(tool)}
+                      variant={
+                        selectedTools.includes(tool)
+                          ? "subtleBlue"
+                          : "subtleGrey"
+                      }
+                    />
+                  ))}
+                </Box>
+              </Box>
+
+              <Box column gap={1.5}>
+                <T fontWeight="semibold">Tags</T>
+                <Box w={1} flexWrap="wrap" gap={1.5}>
+                  {normalizedTags.map((tag) => (
+                    <Tag
+                      key={tag.id}
+                      text={tag.name}
+                      isInteractive
+                      onClick={() => handleToggleTag(tag.id)}
+                      variant={
+                        selectedTags.includes(tag.id)
+                          ? "subtleBlue"
+                          : "subtleGrey"
+                      }
+                    />
+                  ))}
+                </Box>
+              </Box>
+            </>
+          ) : (
+            <Box column gap={1}>
+              <Label htmlFor="upload-markdown-file" text="Markdown file" />
+              <input
+                id="upload-markdown-file"
+                type="file"
+                accept=".md,text/markdown"
+                onChange={(event) => {
+                  const selectedFile = event.target.files?.[0] ?? null;
+                  setMarkdownFile(selectedFile);
+                }}
+                disabled={isSubmitting}
+              />
+              <P color="neutral.textSecondary">
+                Upload a markdown file and the backend will infer artifact data.
+              </P>
             </Box>
-          </Box>
+          )}
+
+          {submitError ? <P color="error.text">{submitError}</P> : null}
         </Box>
-        {/* Action buttons */}
+
         <Box w={1} justifyContent="flex-end" gap={2} px={2} pb={2}>
-          <Button variant="secondaryDark" onClick={onClose}>
+          <Button
+            variant="secondaryDark"
+            onClick={onClose}
+            disabled={isSubmitting}
+          >
             Cancel
           </Button>
-          <Button variant="primaryDark" onClick={handleUpload}>
-            Upload
+          <Button
+            variant="primaryDark"
+            onClick={() => void handleUpload()}
+            disabled={isSubmitting}
+          >
+            {isSubmitting
+              ? "Uploading..."
+              : uploadMode === UploadMode.Manual
+                ? "Upload"
+                : "Create From Markdown"}
           </Button>
         </Box>
       </Box>

@@ -5,10 +5,13 @@ import {
   Button,
   Grid,
   Heading,
+  Input,
+  Label,
   Modal,
   P,
   Spinner,
   Tag,
+  Textarea,
 } from "@veracity/vui";
 import { getPagedPrompts } from "../../api/prompts";
 import { getTags } from "../../api/tags";
@@ -17,6 +20,7 @@ import type { ArtifactItem } from "../../shared/types/artifacts";
 import ArtifactPageHeader from "../../shared/components/ArtifactPageHeader";
 import ArtifactSearchFiltersCard from "../../shared/components/ArtifactSearchFiltersCard";
 import ArtifactCard from "../../shared/components/ArtifactCard";
+import UploadArtifactModal from "../../shared/components/UploadArtifactModal";
 import { useBottomReach } from "../../shared/hooks/useBottomReach";
 import { artifactFromPrompt } from "../../shared/utils/artifactFromPrompt";
 
@@ -24,6 +28,11 @@ const TOOL_FILTERS = ["All Tools", "GitHub Copilot", "Claude Code"];
 const PAGE_SIZE = 12;
 
 export default function PromptsPage() {
+  const [editingPrompt, setEditingPrompt] = useState<{
+    title: string;
+    description: string;
+    content: string;
+  } | null>(null);
   const [searchValue, setSearchValue] = useState("");
   const [activeTool, setActiveTool] = useState(TOOL_FILTERS[0]);
   const [activeTag, setActiveTag] = useState<string | null>(null);
@@ -82,6 +91,14 @@ export default function PromptsPage() {
       (tagsQuery.data ?? [])
         .map((tag) => tag.name?.trim())
         .filter((name): name is string => Boolean(name)),
+    [tagsQuery.data],
+  );
+
+  const promptTagOptions = useMemo(
+    () =>
+      (tagsQuery.data ?? [])
+        .map((tag) => ({ id: tag.id, name: tag.name?.trim() ?? "" }))
+        .filter((tag) => Boolean(tag.name)),
     [tagsQuery.data],
   );
 
@@ -178,22 +195,89 @@ export default function PromptsPage() {
         </>
       )}
 
-      <Modal
+      <UploadArtifactModal
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
-        aria-labelledby="upload-prompt-modal-title"
+        artifactType={PromptType.Prompt}
+        artifactLabel="Prompt"
+        availableTools={TOOL_FILTERS.filter((tool) => tool !== "All Tools")}
+        availableTags={promptTagOptions}
+        onAfterCreate={async ({ mode, artifact }) => {
+          await promptsQuery.refetch();
+
+          if (mode === "markdown") {
+            setEditingPrompt({
+              title: artifact.name?.trim() ?? "",
+              description: artifact.description?.trim() ?? "",
+              content: artifact.content?.trim() ?? "",
+            });
+          }
+        }}
+      />
+
+      <Modal
+        isOpen={Boolean(editingPrompt)}
+        onClose={() => setEditingPrompt(null)}
+        aria-labelledby="prompt-edit-modal-title"
       >
         <Box column gap={3} p={4}>
-          <Heading id="upload-prompt-modal-title" as="h2">
-            Upload Prompt
+          <Heading id="prompt-edit-modal-title" as="h2">
+            Edit Prompt
           </Heading>
-          <P>Upload flow is coming next for reusable prompt artifacts.</P>
+
+          <Box column gap={1}>
+            <Label htmlFor="prompt-edit-title" text="Title" />
+            <Input
+              id="prompt-edit-title"
+              value={editingPrompt?.title ?? ""}
+              onChange={(event) =>
+                setEditingPrompt((prev) =>
+                  prev ? { ...prev, title: event.target.value } : prev,
+                )
+              }
+            />
+          </Box>
+
+          <Box column gap={1}>
+            <Label htmlFor="prompt-edit-description" text="Description" />
+            <Textarea
+              id="prompt-edit-description"
+              rows={3}
+              value={editingPrompt?.description ?? ""}
+              onChange={(event) =>
+                setEditingPrompt((prev) =>
+                  prev ? { ...prev, description: event.target.value } : prev,
+                )
+              }
+            />
+          </Box>
+
+          <Box column gap={1}>
+            <Label htmlFor="prompt-edit-content" text="Content" />
+            <Textarea
+              id="prompt-edit-content"
+              rows={6}
+              value={editingPrompt?.content ?? ""}
+              onChange={(event) =>
+                setEditingPrompt((prev) =>
+                  prev ? { ...prev, content: event.target.value } : prev,
+                )
+              }
+            />
+          </Box>
+
           <Box w={1} justifyContent="flex-end" gap={2}>
             <Button
               variant="secondaryDark"
-              onClick={() => setIsUploadModalOpen(false)}
+              onClick={() => setEditingPrompt(null)}
             >
-              Close
+              Cancel
+            </Button>
+            <Button
+              variant="primaryDark"
+              onClick={() => setEditingPrompt(null)}
+            >
+              Save
             </Button>
           </Box>
         </Box>

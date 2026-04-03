@@ -5,10 +5,13 @@ import {
   Button,
   Grid,
   Heading,
+  Input,
+  Label,
   Modal,
   P,
   Spinner,
   Tag,
+  Textarea,
 } from "@veracity/vui";
 import { getPagedPrompts } from "../../api/prompts";
 import { getTags } from "../../api/tags";
@@ -17,6 +20,7 @@ import type { ArtifactItem } from "../../shared/types/artifacts";
 import ArtifactPageHeader from "../../shared/components/ArtifactPageHeader";
 import ArtifactCard from "../../shared/components/ArtifactCard";
 import ArtifactSearchFiltersCard from "../../shared/components/ArtifactSearchFiltersCard";
+import UploadArtifactModal from "../../shared/components/UploadArtifactModal";
 import { useBottomReach } from "../../shared/hooks/useBottomReach";
 import { artifactFromPrompt } from "../../shared/utils/artifactFromPrompt";
 
@@ -24,6 +28,11 @@ const TOOL_FILTERS = ["All Tools", "GitHub Copilot", "Claude Code"];
 const PAGE_SIZE = 12;
 
 export default function InstructionsPage() {
+  const [editingInstruction, setEditingInstruction] = useState<{
+    title: string;
+    description: string;
+    content: string;
+  } | null>(null);
   const [searchValue, setSearchValue] = useState("");
   const [activeTool, setActiveTool] = useState(TOOL_FILTERS[0]);
   const [activeTag, setActiveTag] = useState<string | null>(null);
@@ -81,6 +90,14 @@ export default function InstructionsPage() {
       (tagsQuery.data ?? [])
         .map((tag) => tag.name?.trim())
         .filter((name): name is string => Boolean(name)),
+    [tagsQuery.data],
+  );
+
+  const instructionTagOptions = useMemo(
+    () =>
+      (tagsQuery.data ?? [])
+        .map((tag) => ({ id: tag.id, name: tag.name?.trim() ?? "" }))
+        .filter((tag) => Boolean(tag.name)),
     [tagsQuery.data],
   );
 
@@ -180,22 +197,89 @@ export default function InstructionsPage() {
         </>
       )}
 
-      <Modal
+      <UploadArtifactModal
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
-        aria-labelledby="upload-instruction-modal-title"
+        artifactType={PromptType.Instruction}
+        artifactLabel="Instruction"
+        availableTools={TOOL_FILTERS.filter((tool) => tool !== "All Tools")}
+        availableTags={instructionTagOptions}
+        onAfterCreate={async ({ mode, artifact }) => {
+          await instructionsQuery.refetch();
+
+          if (mode === "markdown") {
+            setEditingInstruction({
+              title: artifact.name?.trim() ?? "",
+              description: artifact.description?.trim() ?? "",
+              content: artifact.content?.trim() ?? "",
+            });
+          }
+        }}
+      />
+
+      <Modal
+        isOpen={Boolean(editingInstruction)}
+        onClose={() => setEditingInstruction(null)}
+        aria-labelledby="instruction-edit-modal-title"
       >
         <Box column gap={3} p={4}>
-          <Heading id="upload-instruction-modal-title" as="h2">
-            Upload Instruction
+          <Heading id="instruction-edit-modal-title" as="h2">
+            Edit Instruction
           </Heading>
-          <P>Upload flow is coming next for reusable instruction artifacts.</P>
+
+          <Box column gap={1}>
+            <Label htmlFor="instruction-edit-title" text="Title" />
+            <Input
+              id="instruction-edit-title"
+              value={editingInstruction?.title ?? ""}
+              onChange={(event) =>
+                setEditingInstruction((prev) =>
+                  prev ? { ...prev, title: event.target.value } : prev,
+                )
+              }
+            />
+          </Box>
+
+          <Box column gap={1}>
+            <Label htmlFor="instruction-edit-description" text="Description" />
+            <Textarea
+              id="instruction-edit-description"
+              rows={3}
+              value={editingInstruction?.description ?? ""}
+              onChange={(event) =>
+                setEditingInstruction((prev) =>
+                  prev ? { ...prev, description: event.target.value } : prev,
+                )
+              }
+            />
+          </Box>
+
+          <Box column gap={1}>
+            <Label htmlFor="instruction-edit-content" text="Content" />
+            <Textarea
+              id="instruction-edit-content"
+              rows={6}
+              value={editingInstruction?.content ?? ""}
+              onChange={(event) =>
+                setEditingInstruction((prev) =>
+                  prev ? { ...prev, content: event.target.value } : prev,
+                )
+              }
+            />
+          </Box>
+
           <Box w={1} justifyContent="flex-end" gap={2}>
             <Button
               variant="secondaryDark"
-              onClick={() => setIsUploadModalOpen(false)}
+              onClick={() => setEditingInstruction(null)}
             >
-              Close
+              Cancel
+            </Button>
+            <Button
+              variant="primaryDark"
+              onClick={() => setEditingInstruction(null)}
+            >
+              Save
             </Button>
           </Box>
         </Box>

@@ -5,10 +5,13 @@ import {
   Button,
   Grid,
   Heading,
+  Input,
+  Label,
   Modal,
   P,
   Spinner,
   Tag,
+  Textarea,
 } from "@veracity/vui";
 import { getPagedPrompts } from "../../api/prompts";
 import { getTags } from "../../api/tags";
@@ -17,6 +20,7 @@ import type { ArtifactItem } from "../../shared/types/artifacts";
 import ArtifactCard from "../../shared/components/ArtifactCard";
 import ArtifactPageHeader from "../../shared/components/ArtifactPageHeader";
 import ArtifactSearchFiltersCard from "../../shared/components/ArtifactSearchFiltersCard";
+import UploadArtifactModal from "../../shared/components/UploadArtifactModal";
 import { useBottomReach } from "../../shared/hooks/useBottomReach";
 import { artifactFromPrompt } from "../../shared/utils/artifactFromPrompt";
 
@@ -24,6 +28,11 @@ const TOOL_FILTERS = ["All Tools", "GitHub Copilot", "Claude Code"];
 const PAGE_SIZE = 12;
 
 export default function AgentsPage() {
+  const [editingAgent, setEditingAgent] = useState<{
+    title: string;
+    description: string;
+    content: string;
+  } | null>(null);
   const [searchValue, setSearchValue] = useState("");
   const [activeTool, setActiveTool] = useState(TOOL_FILTERS[0]);
   const [activeTag, setActiveTag] = useState<string | null>(null);
@@ -80,6 +89,14 @@ export default function AgentsPage() {
       (tagsQuery.data ?? [])
         .map((tag) => tag.name?.trim())
         .filter((name): name is string => Boolean(name)),
+    [tagsQuery.data],
+  );
+
+  const agentTagOptions = useMemo(
+    () =>
+      (tagsQuery.data ?? [])
+        .map((tag) => ({ id: tag.id, name: tag.name?.trim() ?? "" }))
+        .filter((tag) => Boolean(tag.name)),
     [tagsQuery.data],
   );
 
@@ -175,22 +192,86 @@ export default function AgentsPage() {
         </>
       )}
 
-      <Modal
+      <UploadArtifactModal
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
-        aria-labelledby="upload-agent-modal-title"
+        artifactType={PromptType.Agent}
+        artifactLabel="Agent"
+        availableTools={TOOL_FILTERS.filter((tool) => tool !== "All Tools")}
+        availableTags={agentTagOptions}
+        onAfterCreate={async ({ mode, artifact }) => {
+          await agentsQuery.refetch();
+
+          if (mode === "markdown") {
+            setEditingAgent({
+              title: artifact.name?.trim() ?? "",
+              description: artifact.description?.trim() ?? "",
+              content: artifact.content?.trim() ?? "",
+            });
+          }
+        }}
+      />
+
+      <Modal
+        isOpen={Boolean(editingAgent)}
+        onClose={() => setEditingAgent(null)}
+        aria-labelledby="agent-edit-modal-title"
       >
         <Box column gap={3} p={4}>
-          <Heading id="upload-agent-modal-title" as="h2">
-            Upload Agent
+          <Heading id="agent-edit-modal-title" as="h2">
+            Edit Agent
           </Heading>
-          <P>Upload flow is coming next for reusable agent profiles.</P>
+
+          <Box column gap={1}>
+            <Label htmlFor="agent-edit-title" text="Title" />
+            <Input
+              id="agent-edit-title"
+              value={editingAgent?.title ?? ""}
+              onChange={(event) =>
+                setEditingAgent((prev) =>
+                  prev ? { ...prev, title: event.target.value } : prev,
+                )
+              }
+            />
+          </Box>
+
+          <Box column gap={1}>
+            <Label htmlFor="agent-edit-description" text="Description" />
+            <Textarea
+              id="agent-edit-description"
+              rows={3}
+              value={editingAgent?.description ?? ""}
+              onChange={(event) =>
+                setEditingAgent((prev) =>
+                  prev ? { ...prev, description: event.target.value } : prev,
+                )
+              }
+            />
+          </Box>
+
+          <Box column gap={1}>
+            <Label htmlFor="agent-edit-content" text="Content" />
+            <Textarea
+              id="agent-edit-content"
+              rows={6}
+              value={editingAgent?.content ?? ""}
+              onChange={(event) =>
+                setEditingAgent((prev) =>
+                  prev ? { ...prev, content: event.target.value } : prev,
+                )
+              }
+            />
+          </Box>
+
           <Box w={1} justifyContent="flex-end" gap={2}>
             <Button
               variant="secondaryDark"
-              onClick={() => setIsUploadModalOpen(false)}
+              onClick={() => setEditingAgent(null)}
             >
-              Close
+              Cancel
+            </Button>
+            <Button variant="primaryDark" onClick={() => setEditingAgent(null)}>
+              Save
             </Button>
           </Box>
         </Box>
