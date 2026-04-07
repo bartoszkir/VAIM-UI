@@ -15,7 +15,7 @@ import {
 } from "@veracity/vui";
 import { getPagedPrompts } from "../../api/prompts";
 import { getTags } from "../../api/tags";
-import { PromptType } from "../../api/types";
+import { PromptType, ToolType } from "../../api/types";
 import type { ArtifactItem } from "../../shared/types/artifacts";
 import ArtifactCard from "../../shared/components/ArtifactCard";
 import ArtifactPageHeader from "../../shared/components/ArtifactPageHeader";
@@ -24,7 +24,12 @@ import UploadArtifactModal from "../../shared/components/UploadArtifactModal";
 import { useBottomReach } from "../../shared/hooks/useBottomReach";
 import { artifactFromPrompt } from "../../shared/utils/artifactFromPrompt";
 
-const TOOL_FILTERS = ["All Tools", "GitHub Copilot", "Claude Code"];
+const TOOL_FILTERS = [
+  { label: "All Tools", value: undefined },
+  { label: "GitHub Copilot", value: ToolType.Copilot },
+  { label: "Claude Code", value: ToolType.Claude },
+];
+const DEFAULT_TOOL_FILTER_LABEL = "All Tools";
 const PAGE_SIZE = 12;
 
 export default function SkillsPage() {
@@ -34,7 +39,9 @@ export default function SkillsPage() {
     content: string;
   } | null>(null);
   const [searchValue, setSearchValue] = useState("");
-  const [activeTool, setActiveTool] = useState(TOOL_FILTERS[0]);
+  const [activeToolType, setActiveToolType] = useState<ToolType | undefined>(
+    undefined,
+  );
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [selectedSkill, setSelectedSkill] = useState<ArtifactItem | null>(null);
@@ -49,7 +56,7 @@ export default function SkillsPage() {
       "artifacts",
       PromptType.Skill,
       searchValue,
-      activeTool,
+      activeToolType,
       activeTag,
     ],
     initialPageParam: 1,
@@ -59,7 +66,7 @@ export default function SkillsPage() {
         pageSize: PAGE_SIZE,
         type: PromptType.Skill,
         search: searchValue.trim() || undefined,
-        tool: activeTool === "All Tools" ? undefined : activeTool,
+        toolType: activeToolType,
         tag: activeTag ?? undefined,
       }),
     getNextPageParam: (lastPage, allPages) => {
@@ -100,6 +107,18 @@ export default function SkillsPage() {
     [tagsQuery.data],
   );
 
+  const activeToolLabel =
+    TOOL_FILTERS.find((toolFilter) => toolFilter.value === activeToolType)
+      ?.label ?? DEFAULT_TOOL_FILTER_LABEL;
+
+  const handleToolChange = (selectedToolLabel: string) => {
+    const selectedToolType = TOOL_FILTERS.find(
+      (toolFilter) => toolFilter.label === selectedToolLabel,
+    )?.value;
+
+    setActiveToolType(selectedToolType);
+  };
+
   const handleLoadMore = () => {
     if (!skillsQuery.hasNextPage || skillsQuery.isFetchingNextPage) {
       return;
@@ -128,9 +147,9 @@ export default function SkillsPage() {
         searchPlaceholder="Search artifacts..."
         searchValue={searchValue}
         onSearchChange={setSearchValue}
-        toolFilters={TOOL_FILTERS}
-        activeTool={activeTool}
-        onToolChange={setActiveTool}
+        toolFilters={TOOL_FILTERS.map((toolFilter) => toolFilter.label)}
+        activeTool={activeToolLabel}
+        onToolChange={handleToolChange}
         tags={skillTags}
         activeTag={activeTag ?? undefined}
         onTagChange={setActiveTag}
@@ -196,7 +215,9 @@ export default function SkillsPage() {
         onClose={() => setIsUploadModalOpen(false)}
         artifactType={PromptType.Skill}
         artifactLabel="Skill"
-        availableTools={TOOL_FILTERS.filter((tool) => tool !== "All Tools")}
+        availableTools={TOOL_FILTERS.filter(
+          (toolFilter) => toolFilter.value,
+        ).map((toolFilter) => toolFilter.label)}
         availableTags={skillTagOptions}
         onAfterCreate={async ({ mode, artifact }) => {
           await skillsQuery.refetch();

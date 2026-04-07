@@ -7,6 +7,13 @@ export const PromptType = {
 
 export type PromptType = (typeof PromptType)[keyof typeof PromptType];
 
+export const ToolType = {
+  Copilot: 1,
+  Claude: 2,
+} as const;
+
+export type ToolType = (typeof ToolType)[keyof typeof ToolType];
+
 export type ProblemDetails = {
   type?: string | null;
   title?: string | null;
@@ -21,6 +28,11 @@ export type PromptTypeDto = {
   name: string;
 };
 
+export type ToolTypeDto = {
+  id: ToolType;
+  name: string;
+};
+
 export type TagDto = {
   id: string;
   name?: string | null;
@@ -32,11 +44,13 @@ export type PromptDto = {
   description?: string | null;
   content?: string | null;
   authorId: string;
+  authorDisplayName?: string | null;
   isPublic: boolean;
   type: PromptType;
   createdAt: string;
   updatedAt?: string | null;
   tags?: TagDto[] | null;
+  toolTypes?: ToolType[] | null;
   likesCount: number;
 };
 

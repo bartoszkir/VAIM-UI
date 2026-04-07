@@ -35,21 +35,29 @@ export default function ArtifactCard({
 
       <P color="neutral.textSecondary">{artifact.description}</P>
 
-      <Box w={1} flexWrap="wrap" gap={1.5}>
-        {artifact.tools.map((tool) => (
-          <Tag
-            key={`${artifact.id}-${tool}`}
-            text={tool}
-            variant="subtleBlue"
-          />
-        ))}
-      </Box>
+      {artifact.tools.length > 0 ? (
+        <Box w={1} flexWrap="wrap" gap={1.5}>
+          {artifact.tools.map((tool) => (
+            <Tag
+              key={`${artifact.id}-${tool}`}
+              text={tool}
+              variant="subtleBlue"
+            />
+          ))}
+        </Box>
+      ) : null}
 
-      <Box w={1} flexWrap="wrap" gap={1.5}>
-        {artifact.tags.map((tag) => (
-          <Tag key={`${artifact.id}-${tag}`} text={tag} variant="subtleGrey" />
-        ))}
-      </Box>
+      {artifact.tags.length > 0 ? (
+        <Box w={1} flexWrap="wrap" gap={1.5}>
+          {artifact.tags.map((tag) => (
+            <Tag
+              key={`${artifact.id}-${tag}`}
+              text={tag}
+              variant="subtleGrey"
+            />
+          ))}
+        </Box>
+      ) : null}
 
       <Box w={1} justifyContent="space-between" alignItems="center" mt={1}>
         <T color="neutral.textSecondary">{artifact.comments} comments</T>

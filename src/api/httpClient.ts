@@ -98,6 +98,7 @@ class HttpClient {
     const url = this.toAbsoluteUrl(path, query);
     const response = await fetch(url, {
       ...requestOptions,
+      credentials: "include",
       method,
     });
     const body = await this.parseResponseBody(response);

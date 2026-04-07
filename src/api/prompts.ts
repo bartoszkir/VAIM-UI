@@ -7,10 +7,13 @@ import type {
   PromptType,
   PromptTypeDto,
   PromptUpdateRequest,
+  ToolType,
+  ToolTypeDto,
 } from "./types";
 
 export type GetPromptsParams = {
   type?: PromptType;
+  toolType?: ToolType;
 };
 
 export type GetPagedPromptsParams = {
@@ -18,12 +21,16 @@ export type GetPagedPromptsParams = {
   pageSize?: number;
   type?: PromptType;
   search?: string;
-  tool?: string;
+  toolType?: ToolType;
   tag?: string;
 };
 
 export async function getPromptTypes(): Promise<PromptTypeDto[]> {
   return httpClient.get<PromptTypeDto[]>("/prompts/types");
+}
+
+export async function getToolTypes(): Promise<ToolTypeDto[]> {
+  return httpClient.get<ToolTypeDto[]>("/prompts/toolTypes");
 }
 
 export async function getPrompts(
@@ -32,6 +39,7 @@ export async function getPrompts(
   return httpClient.get<PromptDto[]>("/prompts", {
     query: {
       type: params.type,
+      toolType: params.toolType,
     },
   });
 }
@@ -45,7 +53,7 @@ export async function getPagedPrompts(
       pageSize: params.pageSize,
       type: params.type,
       search: params.search,
-      tool: params.tool,
+      toolType: params.toolType,
       tag: params.tag,
     },
   });
