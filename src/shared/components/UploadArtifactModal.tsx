@@ -10,6 +10,7 @@ import {
   Tag,
   Button,
   P,
+  Message,
 } from "@veracity/vui";
 import { useToast } from "@veracity/vui";
 import { createPrompt, createPromptFromMarkdown } from "../../api/prompts";
@@ -57,7 +58,7 @@ export default function UploadArtifactModal({
   availableTags,
   onAfterCreate,
 }: UploadArtifactModalProps) {
-  const { showSuccess } = useToast();
+  const { showSuccess, showError: showErrorToast } = useToast();
   const prevIsOpenRef = useRef(isOpen);
 
   const [uploadMode, setUploadMode] = useState<UploadMode>(UploadMode.Manual);
@@ -67,8 +68,8 @@ export default function UploadArtifactModal({
   const [selectedTools, setSelectedTools] = useState<ToolType[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [markdownFile, setMarkdownFile] = useState<File | null>(null);
-  const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const normalizedTags: ArtifactTag[] = availableTags.map((tag) =>
     typeof tag === "string" ? { id: tag, name: tag } : tag,
@@ -82,8 +83,20 @@ export default function UploadArtifactModal({
     setSelectedTools([]);
     setSelectedTags([]);
     setMarkdownFile(null);
-    setSubmitError(null);
     setIsSubmitting(false);
+    setFieldErrors({});
+  };
+
+  const setFieldError = (field: string, error: string) => {
+    setFieldErrors((prev) => ({ ...prev, [field]: error }));
+  };
+
+  const clearFieldError = (field: string) => {
+    setFieldErrors((prev) => {
+      const updated = { ...prev };
+      delete updated[field];
+      return updated;
+    });
   };
 
   useEffect(() => {
@@ -93,10 +106,6 @@ export default function UploadArtifactModal({
 
     prevIsOpenRef.current = isOpen;
   }, [isOpen]);
-
-  useEffect(() => {
-    setSubmitError(null);
-  }, [uploadMode]);
 
   const getErrorMessage = (error: unknown) => {
     if (error instanceof HttpError) {
@@ -116,8 +125,6 @@ export default function UploadArtifactModal({
         ? prev.filter((value) => value !== tool)
         : [...prev, tool],
     );
-
-    setSubmitError(null);
   };
 
   const handleToggleTag = (tagId: string) => {
@@ -129,22 +136,25 @@ export default function UploadArtifactModal({
   };
 
   const handleManualUpload = async () => {
+    const errors: Record<string, string> = {};
+
     if (selectedTools.length === 0) {
-      setSubmitError("Select at least one compatible AI tool.");
-      return;
+      errors.tools = "Select at least one compatible AI tool.";
     }
 
     if (!title.trim()) {
-      setSubmitError("Title is required.");
-      return;
+      errors.title = "Title is required.";
     }
 
     if (!content.trim()) {
-      setSubmitError("Content is required.");
+      errors.content = "Content is required.";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
 
-    setSubmitError(null);
     setIsSubmitting(true);
 
     try {
@@ -167,30 +177,40 @@ export default function UploadArtifactModal({
       showSuccess(`${artifactLabel} uploaded successfully`);
       onClose();
     } catch (error) {
-      setSubmitError(getErrorMessage(error));
+      showErrorToast(getErrorMessage(error));
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleMarkdownUpload = async () => {
+    const errors: Record<string, string> = {};
+
     if (selectedTools.length === 0) {
-      setSubmitError("Select at least one compatible AI tool.");
-      return;
+      errors.tools = "Select at least one compatible AI tool.";
     }
 
     if (!markdownFile) {
-      setSubmitError("Select a markdown file to continue.");
+      errors.file = "Select a markdown file to continue.";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
 
-    setSubmitError(null);
     setIsSubmitting(true);
 
     try {
+      if (!markdownFile) {
+        setFieldError("file", "Markdown file is required.");
+        setIsSubmitting(false);
+        return;
+      }
+
       const markdownText = await markdownFile.text();
       if (!markdownText.trim()) {
-        setSubmitError("Markdown file is empty.");
+        setFieldError("file", "Markdown file is empty.");
         return;
       }
 
@@ -210,7 +230,7 @@ export default function UploadArtifactModal({
       showSuccess(`${artifactLabel} created from markdown`);
       onClose();
     } catch (error) {
-      setSubmitError(getErrorMessage(error));
+      showErrorToast(getErrorMessage(error));
     } finally {
       setIsSubmitting(false);
     }
@@ -281,14 +301,17 @@ export default function UploadArtifactModal({
           </Box>
 
           <Box column gap={1.5}>
-            <T fontWeight="semibold">Compatible AI Tools</T>
+            <T fontWeight="semibold">Compatible AI Tools *</T>
             <Box w={1} flexWrap="wrap" gap={1.5}>
               {availableTools.map((tool) => (
                 <Tag
                   key={tool.id}
                   text={tool.label}
                   isInteractive
-                  onClick={() => handleToggleTool(tool.id)}
+                  onClick={() => {
+                    handleToggleTool(tool.id);
+                    clearFieldError("tools");
+                  }}
                   variant={
                     selectedTools.includes(tool.id)
                       ? "subtleBlue"
@@ -297,18 +320,32 @@ export default function UploadArtifactModal({
                 />
               ))}
             </Box>
+            {fieldErrors.tools ? (
+              <Message id="tools-error" variant="error">
+                {fieldErrors.tools}
+              </Message>
+            ) : null}
           </Box>
 
           {uploadMode === UploadMode.Manual ? (
             <>
               <Box column gap={1}>
-                <Label htmlFor="upload-title" text="Title" />
+                <Label htmlFor="upload-title" text="Title *" />
                 <Input
                   id="upload-title"
                   value={title}
-                  onChange={(event) => setTitle(event.target.value)}
+                  onChange={(event) => {
+                    setTitle(event.target.value);
+                    clearFieldError("title");
+                  }}
                   placeholder="Enter a descriptive title"
+                  isInvalid={!!fieldErrors.title}
                 />
+                {fieldErrors.title ? (
+                  <Message id="title-error" variant="error">
+                    {fieldErrors.title}
+                  </Message>
+                ) : null}
               </Box>
 
               <Box column gap={1}>
@@ -323,14 +360,26 @@ export default function UploadArtifactModal({
               </Box>
 
               <Box column gap={1}>
-                <Label htmlFor="upload-content" text="Content / Instructions" />
+                <Label
+                  htmlFor="upload-content"
+                  text="Content / Instructions *"
+                />
                 <Textarea
                   id="upload-content"
                   value={content}
-                  onChange={(event) => setContent(event.target.value)}
+                  onChange={(event) => {
+                    setContent(event.target.value);
+                    clearFieldError("content");
+                  }}
                   placeholder="Paste your artifact content here..."
                   rows={5}
+                  isInvalid={!!fieldErrors.content}
                 />
+                {fieldErrors.content ? (
+                  <Message id="content-error" variant="error">
+                    {fieldErrors.content}
+                  </Message>
+                ) : null}
               </Box>
 
               <Box column gap={1.5}>
@@ -354,7 +403,7 @@ export default function UploadArtifactModal({
             </>
           ) : (
             <Box column gap={1}>
-              <Label htmlFor="upload-markdown-file" text="Markdown file" />
+              <Label htmlFor="upload-markdown-file" text="Markdown file *" />
               <input
                 id="upload-markdown-file"
                 type="file"
@@ -362,16 +411,20 @@ export default function UploadArtifactModal({
                 onChange={(event) => {
                   const selectedFile = event.target.files?.[0] ?? null;
                   setMarkdownFile(selectedFile);
+                  clearFieldError("file");
                 }}
                 disabled={isSubmitting}
               />
+              {fieldErrors.file ? (
+                <Message id="file-error" variant="error">
+                  {fieldErrors.file}
+                </Message>
+              ) : null}
               <P color="neutral.textSecondary">
                 Upload a markdown file and the backend will infer artifact data.
               </P>
             </Box>
           )}
-
-          {submitError ? <P color="error.text">{submitError}</P> : null}
         </Box>
 
         <Box w={1} justifyContent="flex-end" gap={2} px={2} pb={2}>
