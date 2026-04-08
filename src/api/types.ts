@@ -67,11 +67,13 @@ export type PromptCreateRequest = {
   content?: string | null;
   type: PromptType;
   tagIds?: string[] | null;
+  toolTypes: ToolType[];
 };
 
 export type PromptCreateFromMarkdownRequest = {
   markdownText?: string | null;
   type: PromptType;
+  toolTypes: ToolType[];
 };
 
 export type PromptUpdateRequest = {

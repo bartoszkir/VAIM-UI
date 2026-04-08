@@ -219,9 +219,11 @@ export default function PromptsPage() {
         onClose={() => setIsUploadModalOpen(false)}
         artifactType={PromptType.Prompt}
         artifactLabel="Prompt"
-        availableTools={TOOL_FILTERS.filter(
-          (toolFilter) => toolFilter.value,
-        ).map((toolFilter) => toolFilter.label)}
+        availableTools={TOOL_FILTERS.flatMap((toolFilter) =>
+          toolFilter.value
+            ? [{ id: toolFilter.value, label: toolFilter.label }]
+            : [],
+        )}
         availableTags={promptTagOptions}
         onAfterCreate={async ({ mode, artifact }) => {
           await promptsQuery.refetch();

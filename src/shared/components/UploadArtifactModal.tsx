@@ -14,7 +14,7 @@ import {
 import { useToast } from "@veracity/vui";
 import { createPrompt, createPromptFromMarkdown } from "../../api/prompts";
 import { HttpError } from "../../api/httpClient";
-import type { PromptDto, PromptType } from "../../api/types";
+import type { PromptDto, PromptType, ToolType } from "../../api/types";
 
 const UploadMode = {
   Manual: "manual",
@@ -33,12 +33,17 @@ type UploadAfterCreatePayload = {
   artifact: PromptDto;
 };
 
+type UploadToolOption = {
+  id: ToolType;
+  label: string;
+};
+
 type UploadArtifactModalProps = {
   isOpen: boolean;
   onClose: () => void;
   artifactType: PromptType;
   artifactLabel: string;
-  availableTools: string[];
+  availableTools: UploadToolOption[];
   availableTags: Array<string | ArtifactTag>;
   onAfterCreate?: (payload: UploadAfterCreatePayload) => void | Promise<void>;
 };
@@ -59,7 +64,7 @@ export default function UploadArtifactModal({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [content, setContent] = useState("");
-  const [selectedTools, setSelectedTools] = useState<string[]>([]);
+  const [selectedTools, setSelectedTools] = useState<ToolType[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [markdownFile, setMarkdownFile] = useState<File | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -105,12 +110,14 @@ export default function UploadArtifactModal({
     return "Unable to upload artifact right now.";
   };
 
-  const handleToggleTool = (tool: string) => {
+  const handleToggleTool = (tool: ToolType) => {
     setSelectedTools((prev) =>
       prev.includes(tool)
         ? prev.filter((value) => value !== tool)
         : [...prev, tool],
     );
+
+    setSubmitError(null);
   };
 
   const handleToggleTag = (tagId: string) => {
@@ -122,6 +129,11 @@ export default function UploadArtifactModal({
   };
 
   const handleManualUpload = async () => {
+    if (selectedTools.length === 0) {
+      setSubmitError("Select at least one compatible AI tool.");
+      return;
+    }
+
     if (!title.trim()) {
       setSubmitError("Title is required.");
       return;
@@ -142,6 +154,7 @@ export default function UploadArtifactModal({
         content: content.trim(),
         type: artifactType,
         tagIds: selectedTags.length > 0 ? selectedTags : null,
+        toolTypes: selectedTools,
       });
 
       if (onAfterCreate) {
@@ -161,6 +174,11 @@ export default function UploadArtifactModal({
   };
 
   const handleMarkdownUpload = async () => {
+    if (selectedTools.length === 0) {
+      setSubmitError("Select at least one compatible AI tool.");
+      return;
+    }
+
     if (!markdownFile) {
       setSubmitError("Select a markdown file to continue.");
       return;
@@ -179,6 +197,7 @@ export default function UploadArtifactModal({
       const createdArtifact = await createPromptFromMarkdown({
         markdownText,
         type: artifactType,
+        toolTypes: selectedTools,
       });
 
       if (onAfterCreate) {
@@ -261,6 +280,25 @@ export default function UploadArtifactModal({
             </Box>
           </Box>
 
+          <Box column gap={1.5}>
+            <T fontWeight="semibold">Compatible AI Tools</T>
+            <Box w={1} flexWrap="wrap" gap={1.5}>
+              {availableTools.map((tool) => (
+                <Tag
+                  key={tool.id}
+                  text={tool.label}
+                  isInteractive
+                  onClick={() => handleToggleTool(tool.id)}
+                  variant={
+                    selectedTools.includes(tool.id)
+                      ? "subtleBlue"
+                      : "subtleGrey"
+                  }
+                />
+              ))}
+            </Box>
+          </Box>
+
           {uploadMode === UploadMode.Manual ? (
             <>
               <Box column gap={1}>
@@ -293,25 +331,6 @@ export default function UploadArtifactModal({
                   placeholder="Paste your artifact content here..."
                   rows={5}
                 />
-              </Box>
-
-              <Box column gap={1.5}>
-                <T fontWeight="semibold">Compatible AI Tools</T>
-                <Box w={1} flexWrap="wrap" gap={1.5}>
-                  {availableTools.map((tool) => (
-                    <Tag
-                      key={tool}
-                      text={tool}
-                      isInteractive
-                      onClick={() => handleToggleTool(tool)}
-                      variant={
-                        selectedTools.includes(tool)
-                          ? "subtleBlue"
-                          : "subtleGrey"
-                      }
-                    />
-                  ))}
-                </Box>
               </Box>
 
               <Box column gap={1.5}>

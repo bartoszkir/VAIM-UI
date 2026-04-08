@@ -215,9 +215,11 @@ export default function SkillsPage() {
         onClose={() => setIsUploadModalOpen(false)}
         artifactType={PromptType.Skill}
         artifactLabel="Skill"
-        availableTools={TOOL_FILTERS.filter(
-          (toolFilter) => toolFilter.value,
-        ).map((toolFilter) => toolFilter.label)}
+        availableTools={TOOL_FILTERS.flatMap((toolFilter) =>
+          toolFilter.value
+            ? [{ id: toolFilter.value, label: toolFilter.label }]
+            : [],
+        )}
         availableTags={skillTagOptions}
         onAfterCreate={async ({ mode, artifact }) => {
           await skillsQuery.refetch();

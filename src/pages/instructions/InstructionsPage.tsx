@@ -221,9 +221,11 @@ export default function InstructionsPage() {
         onClose={() => setIsUploadModalOpen(false)}
         artifactType={PromptType.Instruction}
         artifactLabel="Instruction"
-        availableTools={TOOL_FILTERS.filter(
-          (toolFilter) => toolFilter.value,
-        ).map((toolFilter) => toolFilter.label)}
+        availableTools={TOOL_FILTERS.flatMap((toolFilter) =>
+          toolFilter.value
+            ? [{ id: toolFilter.value, label: toolFilter.label }]
+            : [],
+        )}
         availableTags={instructionTagOptions}
         onAfterCreate={async ({ mode, artifact }) => {
           await instructionsQuery.refetch();
