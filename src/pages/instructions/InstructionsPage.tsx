@@ -1,5 +1,10 @@
 import { useMemo, useState } from "react";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import {
   Box,
   Button,
@@ -13,9 +18,14 @@ import {
   Tag,
   Textarea,
 } from "@veracity/vui";
-import { getPagedPrompts } from "../../api/prompts";
+import {
+  getMyLikedPromptIds,
+  getPagedPrompts,
+  likePrompt,
+} from "../../api/prompts";
 import { getTags } from "../../api/tags";
 import { PromptType, ToolType } from "../../api/types";
+import { useUserInfo } from "../../auth/authContext";
 import type { ArtifactItem } from "../../shared/types/artifacts";
 import ArtifactPageHeader from "../../shared/components/ArtifactPageHeader";
 import ArtifactCard from "../../shared/components/ArtifactCard";
@@ -34,6 +44,8 @@ const DEFAULT_TOOL_FILTER_LABEL = "All Tools";
 const PAGE_SIZE = 12;
 
 export default function InstructionsPage() {
+  const userInfo = useUserInfo();
+  const queryClient = useQueryClient();
   const [editingInstruction, setEditingInstruction] = useState<{
     title: string;
     description: string;
@@ -51,6 +63,30 @@ export default function InstructionsPage() {
   const tagsQuery = useQuery({
     queryKey: ["artifact-tags"],
     queryFn: getTags,
+  });
+
+  const likedPromptIdsQuery = useQuery({
+    queryKey: ["my-liked-prompt-ids"],
+    queryFn: getMyLikedPromptIds,
+    enabled: Boolean(userInfo),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const likedPromptIds = useMemo(
+    () => new Set(likedPromptIdsQuery.data ?? []),
+    [likedPromptIdsQuery.data],
+  );
+
+  const likePromptMutation = useMutation({
+    mutationFn: likePrompt,
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["my-liked-prompt-ids"] }),
+        queryClient.invalidateQueries({
+          queryKey: ["artifacts", PromptType.Instruction],
+        }),
+      ]);
+    },
   });
 
   const instructionsQuery = useInfiniteQuery({
@@ -89,9 +125,19 @@ export default function InstructionsPage() {
     () =>
       instructionsQuery.data?.pages
         .flatMap((page) => page.items ?? [])
-        .map(artifactFromPrompt) ?? [],
-    [instructionsQuery.data],
+        .map((instruction) =>
+          artifactFromPrompt(instruction, likedPromptIds),
+        ) ?? [],
+    [instructionsQuery.data, likedPromptIds],
   );
+
+  const handleLikeInstruction = (instruction: ArtifactItem) => {
+    if (!userInfo || instruction.isFavorite || likePromptMutation.isPending) {
+      return;
+    }
+
+    likePromptMutation.mutate(instruction.id);
+  };
 
   const instructionTags = useMemo(
     () =>
@@ -191,6 +237,7 @@ export default function InstructionsPage() {
               <ArtifactCard
                 key={instruction.id}
                 artifact={instruction}
+                onLike={handleLikeInstruction}
                 onViewDetails={setSelectedInstruction}
               />
             ))}

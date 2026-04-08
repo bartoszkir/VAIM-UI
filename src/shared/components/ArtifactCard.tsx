@@ -5,12 +5,14 @@ import { relativeTime } from "../utils/relativeTime";
 type ArtifactCardProps = {
   artifact: ArtifactItem;
   onViewDetails: (artifact: ArtifactItem) => void;
+  onLike?: (artifact: ArtifactItem) => void;
   viewDetailsLabel?: string;
 };
 
 export default function ArtifactCard({
   artifact,
   onViewDetails,
+  onLike,
   viewDetailsLabel = "View details",
 }: ArtifactCardProps) {
   return (
@@ -23,6 +25,7 @@ export default function ArtifactCard({
             variant={artifact.isFavorite ? "primaryDark" : "tertiaryDark"}
             size="sm"
             iconLeft="uiThumbsUp"
+            onClick={() => onLike?.(artifact)}
           >
             {artifact.favorites}
           </Button>

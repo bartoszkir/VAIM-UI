@@ -1,5 +1,10 @@
 import { useMemo, useState } from "react";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import {
   Box,
   Button,
@@ -13,9 +18,14 @@ import {
   Tag,
   Textarea,
 } from "@veracity/vui";
-import { getPagedPrompts } from "../../api/prompts";
+import {
+  getMyLikedPromptIds,
+  getPagedPrompts,
+  likePrompt,
+} from "../../api/prompts";
 import { getTags } from "../../api/tags";
 import { PromptType, ToolType } from "../../api/types";
+import { useUserInfo } from "../../auth/authContext";
 import type { ArtifactItem } from "../../shared/types/artifacts";
 import ArtifactPageHeader from "../../shared/components/ArtifactPageHeader";
 import ArtifactSearchFiltersCard from "../../shared/components/ArtifactSearchFiltersCard";
@@ -34,6 +44,8 @@ const DEFAULT_TOOL_FILTER_LABEL = "All Tools";
 const PAGE_SIZE = 12;
 
 export default function PromptsPage() {
+  const userInfo = useUserInfo();
+  const queryClient = useQueryClient();
   const [editingPrompt, setEditingPrompt] = useState<{
     title: string;
     description: string;
@@ -52,6 +64,30 @@ export default function PromptsPage() {
   const tagsQuery = useQuery({
     queryKey: ["artifact-tags"],
     queryFn: getTags,
+  });
+
+  const likedPromptIdsQuery = useQuery({
+    queryKey: ["my-liked-prompt-ids"],
+    queryFn: getMyLikedPromptIds,
+    enabled: Boolean(userInfo),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const likedPromptIds = useMemo(
+    () => new Set(likedPromptIdsQuery.data ?? []),
+    [likedPromptIdsQuery.data],
+  );
+
+  const likePromptMutation = useMutation({
+    mutationFn: likePrompt,
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["my-liked-prompt-ids"] }),
+        queryClient.invalidateQueries({
+          queryKey: ["artifacts", PromptType.Prompt],
+        }),
+      ]);
+    },
   });
 
   const promptsQuery = useInfiniteQuery({
@@ -90,9 +126,17 @@ export default function PromptsPage() {
     () =>
       promptsQuery.data?.pages
         .flatMap((page) => page.items ?? [])
-        .map(artifactFromPrompt) ?? [],
-    [promptsQuery.data],
+        .map((prompt) => artifactFromPrompt(prompt, likedPromptIds)) ?? [],
+    [likedPromptIds, promptsQuery.data],
   );
+
+  const handleLikePrompt = (prompt: ArtifactItem) => {
+    if (!userInfo || prompt.isFavorite || likePromptMutation.isPending) {
+      return;
+    }
+
+    likePromptMutation.mutate(prompt.id);
+  };
 
   const promptTags = useMemo(
     () =>
@@ -189,6 +233,7 @@ export default function PromptsPage() {
               <ArtifactCard
                 key={prompt.id}
                 artifact={prompt}
+                onLike={handleLikePrompt}
                 onViewDetails={setSelectedPrompt}
               />
             ))}

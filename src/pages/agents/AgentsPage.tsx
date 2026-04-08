@@ -1,5 +1,10 @@
 import { useMemo, useState } from "react";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import {
   Box,
   Button,
@@ -13,9 +18,14 @@ import {
   Tag,
   Textarea,
 } from "@veracity/vui";
-import { getPagedPrompts } from "../../api/prompts";
+import {
+  getMyLikedPromptIds,
+  getPagedPrompts,
+  likePrompt,
+} from "../../api/prompts";
 import { getTags } from "../../api/tags";
 import { PromptType, ToolType } from "../../api/types";
+import { useUserInfo } from "../../auth/authContext";
 import type { ArtifactItem } from "../../shared/types/artifacts";
 import ArtifactCard from "../../shared/components/ArtifactCard";
 import ArtifactPageHeader from "../../shared/components/ArtifactPageHeader";
@@ -34,6 +44,8 @@ const DEFAULT_TOOL_FILTER_LABEL = "All Tools";
 const PAGE_SIZE = 12;
 
 export default function AgentsPage() {
+  const userInfo = useUserInfo();
+  const queryClient = useQueryClient();
   const [editingAgent, setEditingAgent] = useState<{
     title: string;
     description: string;
@@ -50,6 +62,30 @@ export default function AgentsPage() {
   const tagsQuery = useQuery({
     queryKey: ["artifact-tags"],
     queryFn: getTags,
+  });
+
+  const likedPromptIdsQuery = useQuery({
+    queryKey: ["my-liked-prompt-ids"],
+    queryFn: getMyLikedPromptIds,
+    enabled: Boolean(userInfo),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const likedPromptIds = useMemo(
+    () => new Set(likedPromptIdsQuery.data ?? []),
+    [likedPromptIdsQuery.data],
+  );
+
+  const likePromptMutation = useMutation({
+    mutationFn: likePrompt,
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["my-liked-prompt-ids"] }),
+        queryClient.invalidateQueries({
+          queryKey: ["artifacts", PromptType.Agent],
+        }),
+      ]);
+    },
   });
 
   const agentsQuery = useInfiniteQuery({
@@ -88,9 +124,17 @@ export default function AgentsPage() {
     () =>
       agentsQuery.data?.pages
         .flatMap((page) => page.items ?? [])
-        .map(artifactFromPrompt) ?? [],
-    [agentsQuery.data],
+        .map((agent) => artifactFromPrompt(agent, likedPromptIds)) ?? [],
+    [agentsQuery.data, likedPromptIds],
   );
+
+  const handleLikeAgent = (agent: ArtifactItem) => {
+    if (!userInfo || agent.isFavorite || likePromptMutation.isPending) {
+      return;
+    }
+
+    likePromptMutation.mutate(agent.id);
+  };
 
   const agentTags = useMemo(
     () =>
@@ -185,6 +229,7 @@ export default function AgentsPage() {
               <ArtifactCard
                 key={agent.id}
                 artifact={agent}
+                onLike={handleLikeAgent}
                 onViewDetails={setSelectedAgent}
                 viewDetailsLabel="View profile"
               />

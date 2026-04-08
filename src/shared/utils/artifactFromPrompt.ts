@@ -17,7 +17,10 @@ function mapToolTypesToLabels(prompt: PromptDto): string[] {
   ].filter((label): label is string => Boolean(label));
 }
 
-export function artifactFromPrompt(prompt: PromptDto): ArtifactItem {
+export function artifactFromPrompt(
+  prompt: PromptDto,
+  likedPromptIds?: Set<string>,
+): ArtifactItem {
   const title = prompt.name?.trim() || "Untitled artifact";
   const description = prompt.description?.trim() || "No description provided.";
   const author = prompt.authorDisplayName?.trim() || "Unknown author";
@@ -33,7 +36,7 @@ export function artifactFromPrompt(prompt: PromptDto): ArtifactItem {
       .map((tag) => tag.name)
       .filter(Boolean) as string[],
     favorites: prompt.likesCount,
-    isFavorite: false,
+    isFavorite: likedPromptIds?.has(prompt.id) ?? false,
     comments: 0,
     updatedAt: prompt.updatedAt ?? prompt.createdAt,
   };

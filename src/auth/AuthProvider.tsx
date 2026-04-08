@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router";
 import { Box, Spinner } from "@veracity/vui";
 import { ContextProvider } from "./authContext";
 import { getCurrentUser } from "../api/auth";
+import { getMyLikedPromptIds } from "../api/prompts";
 
 export default function AuthProvider({ children }: PropsWithChildren) {
   const navigate = useNavigate();
@@ -12,6 +13,13 @@ export default function AuthProvider({ children }: PropsWithChildren) {
   const { data, isError, isPending } = useQuery({
     queryKey: ["current-user"],
     queryFn: getCurrentUser,
+  });
+
+  useQuery({
+    queryKey: ["my-liked-prompt-ids"],
+    queryFn: getMyLikedPromptIds,
+    enabled: Boolean(data),
+    staleTime: 5 * 60 * 1000,
   });
 
   useEffect(() => {
