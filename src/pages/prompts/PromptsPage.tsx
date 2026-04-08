@@ -21,6 +21,7 @@ import ArtifactPageHeader from "../../shared/components/ArtifactPageHeader";
 import ArtifactSearchFiltersCard from "../../shared/components/ArtifactSearchFiltersCard";
 import ArtifactCard from "../../shared/components/ArtifactCard";
 import UploadArtifactModal from "../../shared/components/UploadArtifactModal";
+import ArtifactDetailsModal from "../../shared/components/ArtifactDetailsModal";
 import { useBottomReach } from "../../shared/hooks/useBottomReach";
 import { artifactFromPrompt } from "../../shared/utils/artifactFromPrompt";
 
@@ -306,29 +307,16 @@ export default function PromptsPage() {
         </Box>
       </Modal>
 
-      <Modal
+      <ArtifactDetailsModal
         isOpen={Boolean(selectedPrompt)}
         onClose={() => setSelectedPrompt(null)}
-        aria-labelledby="prompt-detail-modal-title"
-      >
-        <Box column gap={3} p={4}>
-          <Heading id="prompt-detail-modal-title" as="h2">
-            {selectedPrompt?.title ?? "Prompt Details"}
-          </Heading>
-          <P>
-            Detailed prompt content will be connected in the next step. This
-            placeholder is wired to the selected card.
-          </P>
-          <Box w={1} justifyContent="flex-end" gap={2}>
-            <Button
-              variant="secondaryDark"
-              onClick={() => setSelectedPrompt(null)}
-            >
-              Close
-            </Button>
-          </Box>
-        </Box>
-      </Modal>
+        artifactId={selectedPrompt?.id ?? null}
+        artifactType={PromptType.Prompt}
+        artifactLabel="Prompt"
+        onAfterSave={async () => {
+          await promptsQuery.refetch();
+        }}
+      />
     </Box>
   );
 }

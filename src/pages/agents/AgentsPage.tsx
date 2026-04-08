@@ -21,6 +21,7 @@ import ArtifactCard from "../../shared/components/ArtifactCard";
 import ArtifactPageHeader from "../../shared/components/ArtifactPageHeader";
 import ArtifactSearchFiltersCard from "../../shared/components/ArtifactSearchFiltersCard";
 import UploadArtifactModal from "../../shared/components/UploadArtifactModal";
+import ArtifactDetailsModal from "../../shared/components/ArtifactDetailsModal";
 import { useBottomReach } from "../../shared/hooks/useBottomReach";
 import { artifactFromPrompt } from "../../shared/utils/artifactFromPrompt";
 
@@ -300,29 +301,16 @@ export default function AgentsPage() {
         </Box>
       </Modal>
 
-      <Modal
+      <ArtifactDetailsModal
         isOpen={Boolean(selectedAgent)}
         onClose={() => setSelectedAgent(null)}
-        aria-labelledby="agent-detail-modal-title"
-      >
-        <Box column gap={3} p={4}>
-          <Heading id="agent-detail-modal-title" as="h2">
-            {selectedAgent?.title ?? "Agent Details"}
-          </Heading>
-          <P>
-            Detailed agent profile content will be connected in the next step.
-            This placeholder is wired to the selected card.
-          </P>
-          <Box w={1} justifyContent="flex-end" gap={2}>
-            <Button
-              variant="secondaryDark"
-              onClick={() => setSelectedAgent(null)}
-            >
-              Close
-            </Button>
-          </Box>
-        </Box>
-      </Modal>
+        artifactId={selectedAgent?.id ?? null}
+        artifactType={PromptType.Agent}
+        artifactLabel="Agent"
+        onAfterSave={async () => {
+          await agentsQuery.refetch();
+        }}
+      />
     </Box>
   );
 }

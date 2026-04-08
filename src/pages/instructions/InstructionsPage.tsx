@@ -21,6 +21,7 @@ import ArtifactPageHeader from "../../shared/components/ArtifactPageHeader";
 import ArtifactCard from "../../shared/components/ArtifactCard";
 import ArtifactSearchFiltersCard from "../../shared/components/ArtifactSearchFiltersCard";
 import UploadArtifactModal from "../../shared/components/UploadArtifactModal";
+import ArtifactDetailsModal from "../../shared/components/ArtifactDetailsModal";
 import { useBottomReach } from "../../shared/hooks/useBottomReach";
 import { artifactFromPrompt } from "../../shared/utils/artifactFromPrompt";
 
@@ -308,29 +309,16 @@ export default function InstructionsPage() {
         </Box>
       </Modal>
 
-      <Modal
+      <ArtifactDetailsModal
         isOpen={Boolean(selectedInstruction)}
         onClose={() => setSelectedInstruction(null)}
-        aria-labelledby="instruction-detail-modal-title"
-      >
-        <Box column gap={3} p={4}>
-          <Heading id="instruction-detail-modal-title" as="h2">
-            {selectedInstruction?.title ?? "Instruction Details"}
-          </Heading>
-          <P>
-            Detailed instruction content will be connected in the next step.
-            This placeholder is wired to the selected card.
-          </P>
-          <Box w={1} justifyContent="flex-end" gap={2}>
-            <Button
-              variant="secondaryDark"
-              onClick={() => setSelectedInstruction(null)}
-            >
-              Close
-            </Button>
-          </Box>
-        </Box>
-      </Modal>
+        artifactId={selectedInstruction?.id ?? null}
+        artifactType={PromptType.Instruction}
+        artifactLabel="Instruction"
+        onAfterSave={async () => {
+          await instructionsQuery.refetch();
+        }}
+      />
     </Box>
   );
 }

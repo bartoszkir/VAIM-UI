@@ -21,6 +21,7 @@ import ArtifactCard from "../../shared/components/ArtifactCard";
 import ArtifactPageHeader from "../../shared/components/ArtifactPageHeader";
 import ArtifactSearchFiltersCard from "../../shared/components/ArtifactSearchFiltersCard";
 import UploadArtifactModal from "../../shared/components/UploadArtifactModal";
+import ArtifactDetailsModal from "../../shared/components/ArtifactDetailsModal";
 import { useBottomReach } from "../../shared/hooks/useBottomReach";
 import { artifactFromPrompt } from "../../shared/utils/artifactFromPrompt";
 
@@ -299,29 +300,16 @@ export default function SkillsPage() {
         </Box>
       </Modal>
 
-      <Modal
+      <ArtifactDetailsModal
         isOpen={Boolean(selectedSkill)}
         onClose={() => setSelectedSkill(null)}
-        aria-labelledby="skill-detail-modal-title"
-      >
-        <Box column gap={3} p={4}>
-          <Heading id="skill-detail-modal-title" as="h2">
-            {selectedSkill?.title ?? "Skill Details"}
-          </Heading>
-          <P>
-            Detailed skill content will be connected in the next step. This
-            placeholder is wired to the selected card.
-          </P>
-          <Box w={1} justifyContent="flex-end" gap={2}>
-            <Button
-              variant="secondaryDark"
-              onClick={() => setSelectedSkill(null)}
-            >
-              Close
-            </Button>
-          </Box>
-        </Box>
-      </Modal>
+        artifactId={selectedSkill?.id ?? null}
+        artifactType={PromptType.Skill}
+        artifactLabel="Skill"
+        onAfterSave={async () => {
+          await skillsQuery.refetch();
+        }}
+      />
     </Box>
   );
 }

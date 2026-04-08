@@ -82,6 +82,7 @@ export type PromptUpdateRequest = {
   content?: string | null;
   type: PromptType;
   tagIds?: string[] | null;
+  toolTypes: ToolType[];
   isPublic: boolean;
 };
 
