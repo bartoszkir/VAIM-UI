@@ -3,12 +3,12 @@ import {
   Box,
   Button,
   Card,
+  Dialog,
   Grid,
   Heading,
   Input,
   Label,
   Message,
-  Modal,
   P,
   Spinner,
   Tag,
@@ -258,83 +258,81 @@ export default function TagsPage() {
         )}
       </Card>
 
-      <Modal
+      <Dialog
         isOpen={Boolean(editingTag)}
         onClose={() => setEditingTag(null)}
-        aria-labelledby="tag-edit-modal-title"
+        aria-labelledby="tag-edit-dialog-title"
+        p={3}
       >
-        <Box column gap={3} p={4}>
-          <Heading id="tag-edit-modal-title" as="h2">
-            Rename Tag
-          </Heading>
+        <Heading id="tag-edit-dialog-title" as="h2">
+          Rename Tag
+        </Heading>
 
-          <Box column gap={1}>
-            <Label htmlFor="tag-edit-name">Tag name</Label>
-            <Input
-              id="tag-edit-name"
-              value={editingName}
-              onChange={(event) => {
-                setEditingName(event.target.value);
-                if (editError) {
-                  setEditError(null);
-                }
-              }}
-              isInvalid={Boolean(editError)}
-            />
-            {editError ? <Message variant="error">{editError}</Message> : null}
-          </Box>
-
-          <Box w={1} justifyContent="flex-end" gap={2}>
-            <Button
-              variant="secondaryDark"
-              onClick={() => setEditingTag(null)}
-              disabled={isEditPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="primaryDark"
-              onClick={() => void handleSaveEdit()}
-              disabled={isEditPending}
-            >
-              Save
-            </Button>
-          </Box>
+        <Box column gap={1} mb={2}>
+          <Label htmlFor="tag-edit-name">Tag name</Label>
+          <Input
+            id="tag-edit-name"
+            value={editingName}
+            onChange={(event) => {
+              setEditingName(event.target.value);
+              if (editError) {
+                setEditError(null);
+              }
+            }}
+            isInvalid={Boolean(editError)}
+            errorText={editError || undefined}
+          />
         </Box>
-      </Modal>
 
-      <Modal
+        <Box w={1} justifyContent="flex-end" gap={2}>
+          <Button
+            variant="secondaryDark"
+            onClick={() => setEditingTag(null)}
+            disabled={isEditPending}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="primaryDark"
+            onClick={() => void handleSaveEdit()}
+            disabled={isEditPending}
+          >
+            Confirm
+          </Button>
+        </Box>
+      </Dialog>
+
+      <Dialog
         isOpen={Boolean(deletingTag)}
         onClose={() => setDeletingTag(null)}
-        aria-labelledby="tag-delete-modal-title"
+        aria-labelledby="tag-delete-dialog-title"
+        p={3}
       >
-        <Box column gap={3} p={4}>
-          <Heading id="tag-delete-modal-title" as="h2">
-            Delete Tag
-          </Heading>
+        <Heading id="tag-delete-dialog-title" as="h2">
+          Delete Tag
+        </Heading>
 
-          <P>
-            Delete <strong>{deletingTag?.name}</strong>? This cannot be undone.
-          </P>
+        <P>
+          Delete <strong>{deletingTag?.name}</strong>? This cannot be undone.
+        </P>
 
-          <Box w={1} justifyContent="flex-end" gap={2}>
-            <Button
-              variant="secondaryDark"
-              onClick={() => setDeletingTag(null)}
-              disabled={isDeletePending}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="primaryDark"
-              onClick={() => void handleDelete()}
-              disabled={isDeletePending}
-            >
-              Delete
-            </Button>
-          </Box>
+        <Box w={1} justifyContent="flex-end" gap={2}>
+          <Button
+            variant="secondaryDark"
+            onClick={() => setDeletingTag(null)}
+            disabled={isDeletePending}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="primaryDark"
+            onClick={() => void handleDelete()}
+            disabled={isDeletePending}
+          >
+            Delete
+          </Button>
         </Box>
-      </Modal>
+      </Dialog>
     </Box>
   );
 }
