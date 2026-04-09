@@ -21,6 +21,7 @@ import {
   getMyLikedPromptIds,
   getPagedPrompts,
   likePrompt,
+  unlikePrompt,
 } from "../../api/prompts";
 import { PromptType, ToolType } from "../../api/types";
 import { useUserInfo } from "../../auth/authContext";
@@ -84,6 +85,18 @@ export default function InstructionsPage() {
     },
   });
 
+  const unlikePromptMutation = useMutation({
+    mutationFn: unlikePrompt,
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["my-liked-prompt-ids"] }),
+        queryClient.invalidateQueries({
+          queryKey: ["artifacts", PromptType.Instruction],
+        }),
+      ]);
+    },
+  });
+
   const instructionsQuery = useInfiniteQuery({
     queryKey: [
       "artifacts",
@@ -133,7 +146,16 @@ export default function InstructionsPage() {
   );
 
   const handleLikeInstruction = (instruction: ArtifactItem) => {
-    if (!userInfo || instruction.isFavorite || likePromptMutation.isPending) {
+    if (
+      !userInfo ||
+      likePromptMutation.isPending ||
+      unlikePromptMutation.isPending
+    ) {
+      return;
+    }
+
+    if (instruction.isFavorite) {
+      unlikePromptMutation.mutate(instruction.id);
       return;
     }
 

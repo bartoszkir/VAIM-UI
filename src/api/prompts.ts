@@ -14,6 +14,7 @@ import type {
 export type GetPromptsParams = {
   type?: PromptType;
   toolType?: ToolType;
+  tagIds?: string[];
 };
 
 export type GetPagedPromptsParams = {
@@ -41,6 +42,7 @@ export async function getPrompts(
     query: {
       type: params.type,
       toolType: params.toolType,
+      tagIds: params.tagIds,
     },
   });
 }
@@ -86,6 +88,10 @@ export async function updatePrompt(
 
 export async function likePrompt(id: string): Promise<void> {
   return httpClient.post<void>(`/prompts/${id}/like`);
+}
+
+export async function unlikePrompt(id: string): Promise<void> {
+  return httpClient.delete<void>(`/prompts/${id}/like`);
 }
 
 export async function getMyLikedPromptIds(): Promise<string[]> {

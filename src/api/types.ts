@@ -66,14 +66,14 @@ export type PromptCreateRequest = {
   description?: string | null;
   content?: string | null;
   type: PromptType;
+  toolTypes?: ToolType[] | null;
   tagIds?: string[] | null;
-  toolTypes: ToolType[];
 };
 
 export type PromptCreateFromMarkdownRequest = {
   markdownText?: string | null;
   type: PromptType;
-  toolTypes: ToolType[];
+  toolTypes?: ToolType[] | null;
 };
 
 export type PromptUpdateRequest = {
@@ -81,8 +81,8 @@ export type PromptUpdateRequest = {
   description?: string | null;
   content?: string | null;
   type: PromptType;
+  toolTypes?: ToolType[] | null;
   tagIds?: string[] | null;
-  toolTypes: ToolType[];
   isPublic: boolean;
 };
 
