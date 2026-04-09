@@ -26,6 +26,7 @@ export type HttpQueryParams = Record<string, HttpQueryParam | HttpQueryParam[]>;
 
 export type HttpRequestConfig = Omit<RequestInit, "method"> & {
   query?: HttpQueryParams;
+  expectedContentType?: string;
 };
 
 class HttpClient {
@@ -59,12 +60,24 @@ class HttpClient {
     return url.toString();
   }
 
-  private async parseResponseBody(response: Response): Promise<unknown> {
+  private async parseResponseBody(
+    response: Response,
+    expectedContentType?: string,
+  ): Promise<unknown> {
     if (response.status === 204) {
       return null;
     }
 
     const contentType = response.headers.get("content-type") ?? "";
+    if (expectedContentType && !contentType.includes(expectedContentType)) {
+      throw new HttpError(
+        502,
+        "Bad Gateway",
+        response.url,
+        "Unexpected content type",
+      );
+    }
+
     if (!contentType.includes("application/json")) {
       return response.text();
     }
@@ -94,14 +107,14 @@ class HttpClient {
     path: string,
     options: HttpRequestConfig = {},
   ): Promise<T> {
-    const { query, ...requestOptions } = options;
+    const { query, expectedContentType, ...requestOptions } = options;
     const url = this.toAbsoluteUrl(path, query);
     const response = await fetch(url, {
       ...requestOptions,
       credentials: "include",
       method,
     });
-    const body = await this.parseResponseBody(response);
+    const body = await this.parseResponseBody(response, expectedContentType);
 
     if (!response.ok) {
       const message =
