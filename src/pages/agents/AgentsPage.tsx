@@ -15,7 +15,6 @@ import {
   Modal,
   P,
   Spinner,
-  Tag,
   Textarea,
 } from "@veracity/vui";
 import {
@@ -23,7 +22,6 @@ import {
   getPagedPrompts,
   likePrompt,
 } from "../../api/prompts";
-import { getTags } from "../../api/tags";
 import { PromptType, ToolType } from "../../api/types";
 import { useUserInfo } from "../../auth/authContext";
 import type { ArtifactItem } from "../../shared/types/artifacts";
@@ -32,6 +30,7 @@ import ArtifactPageHeader from "../../shared/components/ArtifactPageHeader";
 import ArtifactSearchFiltersCard from "../../shared/components/ArtifactSearchFiltersCard";
 import UploadArtifactModal from "../../shared/components/UploadArtifactModal";
 import ArtifactDetailsModal from "../../shared/components/ArtifactDetailsModal";
+import { useArtifactTags } from "../../shared/hooks/useArtifactTags";
 import { useBottomReach } from "../../shared/hooks/useBottomReach";
 import { artifactFromPrompt } from "../../shared/utils/artifactFromPrompt";
 
@@ -55,14 +54,10 @@ export default function AgentsPage() {
   const [activeToolType, setActiveToolType] = useState<ToolType | undefined>(
     undefined,
   );
-  const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [activeTagIds, setActiveTagIds] = useState<string[]>([]);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<ArtifactItem | null>(null);
-
-  const tagsQuery = useQuery({
-    queryKey: ["artifact-tags"],
-    queryFn: getTags,
-  });
+  const { tags, tagsById } = useArtifactTags();
 
   const likedPromptIdsQuery = useQuery({
     queryKey: ["my-liked-prompt-ids"],
@@ -72,7 +67,7 @@ export default function AgentsPage() {
   });
 
   const likedPromptIds = useMemo(
-    () => new Set(likedPromptIdsQuery.data ?? []),
+    () => new Set((likedPromptIdsQuery.data ?? []) as string[]),
     [likedPromptIdsQuery.data],
   );
 
@@ -94,7 +89,7 @@ export default function AgentsPage() {
       PromptType.Agent,
       searchValue,
       activeToolType,
-      activeTag,
+      activeTagIds,
     ],
     initialPageParam: 1,
     queryFn: ({ pageParam }) =>
@@ -104,7 +99,13 @@ export default function AgentsPage() {
         type: PromptType.Agent,
         search: searchValue.trim() || undefined,
         toolType: activeToolType,
-        tag: activeTag ?? undefined,
+        tagIds: activeTagIds.length > 0 ? activeTagIds : undefined,
+        tag:
+          activeTagIds.length > 0
+            ? activeTagIds
+                .map((tagId) => tagsById.get(tagId))
+                .filter((tagName): tagName is string => Boolean(tagName))
+            : undefined,
       }),
     getNextPageParam: (lastPage, allPages) => {
       const loadedCount = allPages.reduce(
@@ -136,21 +137,18 @@ export default function AgentsPage() {
     likePromptMutation.mutate(agent.id);
   };
 
-  const agentTags = useMemo(
-    () =>
-      (tagsQuery.data ?? [])
-        .map((tag) => tag.name?.trim())
-        .filter((name): name is string => Boolean(name)),
-    [tagsQuery.data],
+  const agentTagOptions = useMemo(
+    () => tags.map((tag) => ({ id: tag.id, name: tag.name })),
+    [tags],
   );
 
-  const agentTagOptions = useMemo(
-    () =>
-      (tagsQuery.data ?? [])
-        .map((tag) => ({ id: tag.id, name: tag.name?.trim() ?? "" }))
-        .filter((tag) => Boolean(tag.name)),
-    [tagsQuery.data],
-  );
+  const handleTagChange = (tagId: string) => {
+    setActiveTagIds((prev) =>
+      prev.includes(tagId)
+        ? prev.filter((value) => value !== tagId)
+        : [...prev, tagId],
+    );
+  };
 
   const activeToolLabel =
     TOOL_FILTERS.find((toolFilter) => toolFilter.value === activeToolType)
@@ -195,9 +193,10 @@ export default function AgentsPage() {
         toolFilters={TOOL_FILTERS.map((toolFilter) => toolFilter.label)}
         activeTool={activeToolLabel}
         onToolChange={handleToolChange}
-        tags={agentTags}
-        activeTag={activeTag ?? undefined}
-        onTagChange={setActiveTag}
+        tags={tags}
+        activeTagIds={activeTagIds}
+        onTagChange={handleTagChange}
+        onClearTags={() => setActiveTagIds([])}
       />
 
       {agentsQuery.isPending ? (
@@ -235,18 +234,6 @@ export default function AgentsPage() {
               />
             ))}
           </Grid>
-
-          {activeTag ? (
-            <Box w={1} alignItems="center" gap={2}>
-              <P color="neutral.textSecondary">Filtering by tag:</P>
-              <Tag
-                text={activeTag}
-                variant="subtleBlue"
-                isInteractive
-                onClick={() => setActiveTag(null)}
-              />
-            </Box>
-          ) : null}
 
           <div ref={loadMoreRef} />
           {agentsQuery.isFetchingNextPage ? (

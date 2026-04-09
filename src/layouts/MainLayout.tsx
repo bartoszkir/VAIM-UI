@@ -8,6 +8,7 @@ export default function MainLayout() {
     { title: "Agents", path: "/agents", icon: "uiBrainCircuit" },
     { title: "Prompts", path: "/prompts", icon: "uiBookOpen" },
     { title: "Instructions", path: "/instructions", icon: "uiCogs" },
+    { title: "Tags", path: "/tags", icon: "uiBookmark" },
   ];
 
   const navigate = useNavigate();

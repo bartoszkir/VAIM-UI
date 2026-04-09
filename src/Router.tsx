@@ -5,6 +5,7 @@ import AgentsPage from "./pages/agents/AgentsPage";
 import PromptsPage from "./pages/prompts/PromptsPage";
 import InstructionsPage from "./pages/instructions/InstructionsPage";
 import UnauthorizedPage from "./pages/unauthorized/UnauthorizedPage";
+import TagsPage from "./pages/tags/TagsPage";
 
 export default function AppRouter() {
   return (
@@ -15,6 +16,7 @@ export default function AppRouter() {
         <Route path="/agents" element={<AgentsPage />} />
         <Route path="/prompts" element={<PromptsPage />} />
         <Route path="/instructions" element={<InstructionsPage />} />
+        <Route path="/tags" element={<TagsPage />} />
       </Route>
       <Route path="/unauthorized" element={<UnauthorizedPage />} />
     </Routes>

@@ -15,7 +15,6 @@ import {
   Modal,
   P,
   Spinner,
-  Tag,
   Textarea,
 } from "@veracity/vui";
 import {
@@ -23,7 +22,6 @@ import {
   getPagedPrompts,
   likePrompt,
 } from "../../api/prompts";
-import { getTags } from "../../api/tags";
 import { PromptType, ToolType } from "../../api/types";
 import { useUserInfo } from "../../auth/authContext";
 import type { ArtifactItem } from "../../shared/types/artifacts";
@@ -32,6 +30,7 @@ import ArtifactCard from "../../shared/components/ArtifactCard";
 import ArtifactSearchFiltersCard from "../../shared/components/ArtifactSearchFiltersCard";
 import UploadArtifactModal from "../../shared/components/UploadArtifactModal";
 import ArtifactDetailsModal from "../../shared/components/ArtifactDetailsModal";
+import { useArtifactTags } from "../../shared/hooks/useArtifactTags";
 import { useBottomReach } from "../../shared/hooks/useBottomReach";
 import { artifactFromPrompt } from "../../shared/utils/artifactFromPrompt";
 
@@ -55,15 +54,11 @@ export default function InstructionsPage() {
   const [activeToolType, setActiveToolType] = useState<ToolType | undefined>(
     undefined,
   );
-  const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [activeTagIds, setActiveTagIds] = useState<string[]>([]);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [selectedInstruction, setSelectedInstruction] =
     useState<ArtifactItem | null>(null);
-
-  const tagsQuery = useQuery({
-    queryKey: ["artifact-tags"],
-    queryFn: getTags,
-  });
+  const { tags, tagsById } = useArtifactTags();
 
   const likedPromptIdsQuery = useQuery({
     queryKey: ["my-liked-prompt-ids"],
@@ -73,7 +68,7 @@ export default function InstructionsPage() {
   });
 
   const likedPromptIds = useMemo(
-    () => new Set(likedPromptIdsQuery.data ?? []),
+    () => new Set((likedPromptIdsQuery.data ?? []) as string[]),
     [likedPromptIdsQuery.data],
   );
 
@@ -95,7 +90,7 @@ export default function InstructionsPage() {
       PromptType.Instruction,
       searchValue,
       activeToolType,
-      activeTag,
+      activeTagIds,
     ],
     initialPageParam: 1,
     queryFn: ({ pageParam }) =>
@@ -105,7 +100,13 @@ export default function InstructionsPage() {
         type: PromptType.Instruction,
         search: searchValue.trim() || undefined,
         toolType: activeToolType,
-        tag: activeTag ?? undefined,
+        tagIds: activeTagIds.length > 0 ? activeTagIds : undefined,
+        tag:
+          activeTagIds.length > 0
+            ? activeTagIds
+                .map((tagId) => tagsById.get(tagId))
+                .filter((tagName): tagName is string => Boolean(tagName))
+            : undefined,
       }),
     getNextPageParam: (lastPage, allPages) => {
       const loadedCount = allPages.reduce(
@@ -139,21 +140,18 @@ export default function InstructionsPage() {
     likePromptMutation.mutate(instruction.id);
   };
 
-  const instructionTags = useMemo(
-    () =>
-      (tagsQuery.data ?? [])
-        .map((tag) => tag.name?.trim())
-        .filter((name): name is string => Boolean(name)),
-    [tagsQuery.data],
+  const instructionTagOptions = useMemo(
+    () => tags.map((tag) => ({ id: tag.id, name: tag.name })),
+    [tags],
   );
 
-  const instructionTagOptions = useMemo(
-    () =>
-      (tagsQuery.data ?? [])
-        .map((tag) => ({ id: tag.id, name: tag.name?.trim() ?? "" }))
-        .filter((tag) => Boolean(tag.name)),
-    [tagsQuery.data],
-  );
+  const handleTagChange = (tagId: string) => {
+    setActiveTagIds((prev) =>
+      prev.includes(tagId)
+        ? prev.filter((value) => value !== tagId)
+        : [...prev, tagId],
+    );
+  };
 
   const activeToolLabel =
     TOOL_FILTERS.find((toolFilter) => toolFilter.value === activeToolType)
@@ -201,9 +199,10 @@ export default function InstructionsPage() {
         toolFilters={TOOL_FILTERS.map((toolFilter) => toolFilter.label)}
         activeTool={activeToolLabel}
         onToolChange={handleToolChange}
-        tags={instructionTags}
-        activeTag={activeTag ?? undefined}
-        onTagChange={setActiveTag}
+        tags={tags}
+        activeTagIds={activeTagIds}
+        onTagChange={handleTagChange}
+        onClearTags={() => setActiveTagIds([])}
       />
 
       {instructionsQuery.isPending ? (
@@ -242,18 +241,6 @@ export default function InstructionsPage() {
               />
             ))}
           </Grid>
-
-          {activeTag ? (
-            <Box w={1} alignItems="center" gap={2}>
-              <P color="neutral.textSecondary">Filtering by tag:</P>
-              <Tag
-                text={activeTag}
-                variant="subtleBlue"
-                isInteractive
-                onClick={() => setActiveTag(null)}
-              />
-            </Box>
-          ) : null}
 
           <div ref={loadMoreRef} />
           {instructionsQuery.isFetchingNextPage ? (

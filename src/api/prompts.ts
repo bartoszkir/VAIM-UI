@@ -22,7 +22,8 @@ export type GetPagedPromptsParams = {
   type?: PromptType;
   search?: string;
   toolType?: ToolType;
-  tag?: string;
+  tag?: string | string[];
+  tagIds?: string[];
 };
 
 export async function getPromptTypes(): Promise<PromptTypeDto[]> {
@@ -55,6 +56,7 @@ export async function getPagedPrompts(
       search: params.search,
       toolType: params.toolType,
       tag: params.tag,
+      tagIds: params.tagIds,
     },
   });
 }
