@@ -18,6 +18,7 @@ import {
 import DOMPurify from "dompurify";
 import { marked } from "marked";
 import { useToast } from "@veracity/vui";
+import { copyToClipboard } from "@veracity/ui-utils";
 import { getPromptById, getToolTypes, updatePrompt } from "../../api/prompts";
 import { getTags } from "../../api/tags";
 import { HttpError } from "../../api/httpClient";
@@ -335,6 +336,19 @@ export default function ArtifactDetailsModal({
     }
   };
 
+  const handleCopyContent = async () => {
+    if (!markdownContent) {
+      return;
+    }
+
+    try {
+      await copyToClipboard(markdownContent);
+      showSuccess("Content copied to clipboard");
+    } catch {
+      showErrorToast("Unable to copy content");
+    }
+  };
+
   const modalTitle = artifact?.name?.trim() || `${artifactLabel} Details`;
   const metadataAuthor =
     artifact?.authorDisplayName?.trim() || "Unknown author";
@@ -602,6 +616,15 @@ export default function ArtifactDetailsModal({
                 </>
               ) : (
                 <>
+                  {markdownContent ? (
+                    <Button
+                      variant="secondaryDark"
+                      onClick={() => void handleCopyContent()}
+                      title="Copy markdown content"
+                    >
+                      Copy Content
+                    </Button>
+                  ) : null}
                   <Button variant="secondaryDark" onClick={onClose}>
                     Close
                   </Button>
