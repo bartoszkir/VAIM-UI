@@ -3,8 +3,20 @@ import { useEffect, type PropsWithChildren } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { Box, Spinner } from "@veracity/vui";
 import { ContextProvider } from "./authContext";
+import type { UserInfo } from "./types";
 import { getCurrentUser } from "../api/auth";
+import type { CurrentUserDto } from "../api/types";
 import { getMyLikedPromptIds } from "../api/prompts";
+
+function normalizeCurrentUser(user: CurrentUserDto): UserInfo {
+  const displayName = user.name?.trim() || `${user.firstName} ${user.lastName}`.trim();
+  const companyName = user.company?.name || "";
+  return {
+    id: user.id,
+    displayName,
+    companyName,
+  };
+}
 
 export default function AuthProvider({ children }: PropsWithChildren) {
   const navigate = useNavigate();
@@ -43,5 +55,5 @@ export default function AuthProvider({ children }: PropsWithChildren) {
     );
   }
 
-  return <ContextProvider value={data ?? null}>{children}</ContextProvider>;
+  return <ContextProvider value={data ? normalizeCurrentUser(data) : null}>{children}</ContextProvider>;
 }

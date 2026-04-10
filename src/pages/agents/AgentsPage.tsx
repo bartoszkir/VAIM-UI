@@ -5,18 +5,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import {
-  Box,
-  Button,
-  Grid,
-  Heading,
-  Input,
-  Label,
-  Modal,
-  P,
-  Spinner,
-  Textarea,
-} from "@veracity/vui";
+import { Box, Button, Grid, P, Spinner } from "@veracity/vui";
 import {
   getMyLikedPromptIds,
   getPagedPrompts,
@@ -46,11 +35,6 @@ const PAGE_SIZE = 12;
 export default function AgentsPage() {
   const userInfo = useUserInfo();
   const queryClient = useQueryClient();
-  const [editingAgent, setEditingAgent] = useState<{
-    title: string;
-    description: string;
-    content: string;
-  } | null>(null);
   const [searchValue, setSearchValue] = useState("");
   const [activeToolType, setActiveToolType] = useState<ToolType | undefined>(
     undefined,
@@ -281,79 +265,10 @@ export default function AgentsPage() {
           await agentsQuery.refetch();
 
           if (mode === "markdown") {
-            setEditingAgent({
-              title: artifact.name?.trim() ?? "",
-              description: artifact.description?.trim() ?? "",
-              content: artifact.content?.trim() ?? "",
-            });
+            setSelectedAgent(artifactFromPrompt(artifact, likedPromptIds));
           }
         }}
       />
-
-      <Modal
-        isOpen={Boolean(editingAgent)}
-        onClose={() => setEditingAgent(null)}
-        aria-labelledby="agent-edit-modal-title"
-      >
-        <Box column gap={3} p={4}>
-          <Heading id="agent-edit-modal-title" as="h2">
-            Edit Agent
-          </Heading>
-
-          <Box column gap={1}>
-            <Label htmlFor="agent-edit-title" text="Title" />
-            <Input
-              id="agent-edit-title"
-              value={editingAgent?.title ?? ""}
-              onChange={(event) =>
-                setEditingAgent((prev) =>
-                  prev ? { ...prev, title: event.target.value } : prev,
-                )
-              }
-            />
-          </Box>
-
-          <Box column gap={1}>
-            <Label htmlFor="agent-edit-description" text="Description" />
-            <Textarea
-              id="agent-edit-description"
-              rows={3}
-              value={editingAgent?.description ?? ""}
-              onChange={(event) =>
-                setEditingAgent((prev) =>
-                  prev ? { ...prev, description: event.target.value } : prev,
-                )
-              }
-            />
-          </Box>
-
-          <Box column gap={1}>
-            <Label htmlFor="agent-edit-content" text="Content" />
-            <Textarea
-              id="agent-edit-content"
-              rows={6}
-              value={editingAgent?.content ?? ""}
-              onChange={(event) =>
-                setEditingAgent((prev) =>
-                  prev ? { ...prev, content: event.target.value } : prev,
-                )
-              }
-            />
-          </Box>
-
-          <Box w={1} justifyContent="flex-end" gap={2}>
-            <Button
-              variant="secondaryDark"
-              onClick={() => setEditingAgent(null)}
-            >
-              Cancel
-            </Button>
-            <Button variant="primaryDark" onClick={() => setEditingAgent(null)}>
-              Save
-            </Button>
-          </Box>
-        </Box>
-      </Modal>
 
       <ArtifactDetailsModal
         isOpen={Boolean(selectedAgent)}

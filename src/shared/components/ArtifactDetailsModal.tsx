@@ -189,28 +189,11 @@ export default function ArtifactDetailsModal({
     ];
   }, [toolTypesQuery.data]);
 
-  const currentUserId =
-    (userInfo as { id?: string; userId?: string } | null)?.id ??
-    (userInfo as { id?: string; userId?: string } | null)?.userId ??
-    null;
+  const currentUserId = userInfo?.id ?? null;
 
-  const currentUserDisplayName =
-    userInfo?.displayName?.trim().toLowerCase() ?? "";
-  const authorDisplayName =
-    artifact?.authorDisplayName?.trim().toLowerCase() ?? "";
-
-  const isAuthor =
-    Boolean(
-      currentUserId &&
-      artifact?.authorId &&
-      currentUserId === artifact.authorId,
-    ) ||
-    Boolean(
-      !currentUserId &&
-      currentUserDisplayName &&
-      authorDisplayName &&
-      currentUserDisplayName === authorDisplayName,
-    );
+  const isAuthor = Boolean(
+    currentUserId && artifact?.authorId && currentUserId === artifact.authorId,
+  );
 
   useEffect(() => {
     if (!artifact || isEditMode) {
@@ -353,7 +336,8 @@ export default function ArtifactDetailsModal({
   };
 
   const modalTitle = artifact?.name?.trim() || `${artifactLabel} Details`;
-  const metadataAuthor = artifact?.authorDisplayName?.trim() || "Unknown author";
+  const metadataAuthor =
+    artifact?.authorDisplayName?.trim() || "Unknown author";
   const metadataPublishedAt = toReadableTimestamp(artifact?.createdAt);
   const metadataUpdatedAt = toReadableTimestamp(
     artifact?.updatedAt ?? artifact?.createdAt,
@@ -382,12 +366,7 @@ export default function ArtifactDetailsModal({
           </Heading>
 
           {!isEditMode && artifact ? (
-            <Box
-              w={1}
-              column
-              gap={0.25}
-              aria-label="Artifact metadata"
-            >
+            <Box w={1} column gap={0.25} aria-label="Artifact metadata">
               <Box gap={0.5} alignItems="baseline">
                 <T color="neutral.textSecondary" fontWeight="semibold">
                   Author
@@ -503,7 +482,6 @@ export default function ArtifactDetailsModal({
                       <P color="neutral.textSecondary">No content provided.</P>
                     )}
                   </Box>
-
                 </>
               ) : (
                 <>

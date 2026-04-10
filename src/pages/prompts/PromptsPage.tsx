@@ -5,18 +5,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import {
-  Box,
-  Button,
-  Grid,
-  Heading,
-  Input,
-  Label,
-  Modal,
-  P,
-  Spinner,
-  Textarea,
-} from "@veracity/vui";
+import { Box, Button, Grid, P, Spinner } from "@veracity/vui";
 import {
   getMyLikedPromptIds,
   getPagedPrompts,
@@ -46,11 +35,6 @@ const PAGE_SIZE = 12;
 export default function PromptsPage() {
   const userInfo = useUserInfo();
   const queryClient = useQueryClient();
-  const [editingPrompt, setEditingPrompt] = useState<{
-    title: string;
-    description: string;
-    content: string;
-  } | null>(null);
   const [searchValue, setSearchValue] = useState("");
   const [activeToolType, setActiveToolType] = useState<ToolType | undefined>(
     undefined,
@@ -284,82 +268,10 @@ export default function PromptsPage() {
           await promptsQuery.refetch();
 
           if (mode === "markdown") {
-            setEditingPrompt({
-              title: artifact.name?.trim() ?? "",
-              description: artifact.description?.trim() ?? "",
-              content: artifact.content?.trim() ?? "",
-            });
+            setSelectedPrompt(artifactFromPrompt(artifact, likedPromptIds));
           }
         }}
       />
-
-      <Modal
-        isOpen={Boolean(editingPrompt)}
-        onClose={() => setEditingPrompt(null)}
-        aria-labelledby="prompt-edit-modal-title"
-      >
-        <Box column gap={3} p={4}>
-          <Heading id="prompt-edit-modal-title" as="h2">
-            Edit Prompt
-          </Heading>
-
-          <Box column gap={1}>
-            <Label htmlFor="prompt-edit-title" text="Title" />
-            <Input
-              id="prompt-edit-title"
-              value={editingPrompt?.title ?? ""}
-              onChange={(event) =>
-                setEditingPrompt((prev) =>
-                  prev ? { ...prev, title: event.target.value } : prev,
-                )
-              }
-            />
-          </Box>
-
-          <Box column gap={1}>
-            <Label htmlFor="prompt-edit-description" text="Description" />
-            <Textarea
-              id="prompt-edit-description"
-              rows={3}
-              value={editingPrompt?.description ?? ""}
-              onChange={(event) =>
-                setEditingPrompt((prev) =>
-                  prev ? { ...prev, description: event.target.value } : prev,
-                )
-              }
-            />
-          </Box>
-
-          <Box column gap={1}>
-            <Label htmlFor="prompt-edit-content" text="Content" />
-            <Textarea
-              id="prompt-edit-content"
-              rows={6}
-              value={editingPrompt?.content ?? ""}
-              onChange={(event) =>
-                setEditingPrompt((prev) =>
-                  prev ? { ...prev, content: event.target.value } : prev,
-                )
-              }
-            />
-          </Box>
-
-          <Box w={1} justifyContent="flex-end" gap={2}>
-            <Button
-              variant="secondaryDark"
-              onClick={() => setEditingPrompt(null)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="primaryDark"
-              onClick={() => setEditingPrompt(null)}
-            >
-              Save
-            </Button>
-          </Box>
-        </Box>
-      </Modal>
 
       <ArtifactDetailsModal
         isOpen={Boolean(selectedPrompt)}

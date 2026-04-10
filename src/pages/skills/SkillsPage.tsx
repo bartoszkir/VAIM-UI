@@ -5,18 +5,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import {
-  Box,
-  Grid,
-  Heading,
-  Input,
-  Label,
-  Modal,
-  P,
-  Button,
-  Spinner,
-  Textarea,
-} from "@veracity/vui";
+import { Box, Grid, P, Button, Spinner } from "@veracity/vui";
 import {
   getMyLikedPromptIds,
   getPagedPrompts,
@@ -46,11 +35,6 @@ const PAGE_SIZE = 12;
 export default function SkillsPage() {
   const userInfo = useUserInfo();
   const queryClient = useQueryClient();
-  const [editingSkill, setEditingSkill] = useState<{
-    title: string;
-    description: string;
-    content: string;
-  } | null>(null);
   const [searchValue, setSearchValue] = useState("");
   const [activeToolType, setActiveToolType] = useState<ToolType | undefined>(
     undefined,
@@ -280,79 +264,10 @@ export default function SkillsPage() {
           await skillsQuery.refetch();
 
           if (mode === "markdown") {
-            setEditingSkill({
-              title: artifact.name?.trim() ?? "",
-              description: artifact.description?.trim() ?? "",
-              content: artifact.content?.trim() ?? "",
-            });
+            setSelectedSkill(artifactFromPrompt(artifact, likedPromptIds));
           }
         }}
       />
-
-      <Modal
-        isOpen={Boolean(editingSkill)}
-        onClose={() => setEditingSkill(null)}
-        aria-labelledby="skill-edit-modal-title"
-      >
-        <Box column gap={3} p={4}>
-          <Heading id="skill-edit-modal-title" as="h2">
-            Edit Skill
-          </Heading>
-
-          <Box column gap={1}>
-            <Label htmlFor="skill-edit-title" text="Title" />
-            <Input
-              id="skill-edit-title"
-              value={editingSkill?.title ?? ""}
-              onChange={(event) =>
-                setEditingSkill((prev) =>
-                  prev ? { ...prev, title: event.target.value } : prev,
-                )
-              }
-            />
-          </Box>
-
-          <Box column gap={1}>
-            <Label htmlFor="skill-edit-description" text="Description" />
-            <Textarea
-              id="skill-edit-description"
-              rows={3}
-              value={editingSkill?.description ?? ""}
-              onChange={(event) =>
-                setEditingSkill((prev) =>
-                  prev ? { ...prev, description: event.target.value } : prev,
-                )
-              }
-            />
-          </Box>
-
-          <Box column gap={1}>
-            <Label htmlFor="skill-edit-content" text="Content" />
-            <Textarea
-              id="skill-edit-content"
-              rows={6}
-              value={editingSkill?.content ?? ""}
-              onChange={(event) =>
-                setEditingSkill((prev) =>
-                  prev ? { ...prev, content: event.target.value } : prev,
-                )
-              }
-            />
-          </Box>
-
-          <Box w={1} justifyContent="flex-end" gap={2}>
-            <Button
-              variant="secondaryDark"
-              onClick={() => setEditingSkill(null)}
-            >
-              Cancel
-            </Button>
-            <Button variant="primaryDark" onClick={() => setEditingSkill(null)}>
-              Save
-            </Button>
-          </Box>
-        </Box>
-      </Modal>
 
       <ArtifactDetailsModal
         isOpen={Boolean(selectedSkill)}

@@ -38,6 +38,35 @@ export type TagDto = {
   name?: string | null;
 };
 
+export type UserCompanyDto = {
+  identity: string;
+  internalId: string | null;
+  isAdmin: boolean | null;
+  name: string;
+  id: string;
+  description: string | null;
+};
+
+export type CurrentUserDto = {
+  profilePageUrl: string;
+  messagesUrl: string;
+  identity: string;
+  servicesUrl: string;
+  companiesUrl: string;
+  name: string;
+  email: string;
+  id: string;
+  company: UserCompanyDto;
+  numberOfCompanies: number;
+  verifiedEmail: boolean;
+  language: string | null;
+  firstName: string;
+  lastName: string;
+  extensions: Record<string, unknown> | null;
+  managedAccount: boolean;
+  activated: boolean;
+};
+
 export type PromptDto = {
   id: string;
   name?: string | null;

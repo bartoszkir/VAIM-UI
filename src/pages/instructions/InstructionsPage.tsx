@@ -5,18 +5,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import {
-  Box,
-  Button,
-  Grid,
-  Heading,
-  Input,
-  Label,
-  Modal,
-  P,
-  Spinner,
-  Textarea,
-} from "@veracity/vui";
+import { Box, Button, Grid, P, Spinner } from "@veracity/vui";
 import {
   getMyLikedPromptIds,
   getPagedPrompts,
@@ -46,11 +35,6 @@ const PAGE_SIZE = 12;
 export default function InstructionsPage() {
   const userInfo = useUserInfo();
   const queryClient = useQueryClient();
-  const [editingInstruction, setEditingInstruction] = useState<{
-    title: string;
-    description: string;
-    content: string;
-  } | null>(null);
   const [searchValue, setSearchValue] = useState("");
   const [activeToolType, setActiveToolType] = useState<ToolType | undefined>(
     undefined,
@@ -288,82 +272,12 @@ export default function InstructionsPage() {
           await instructionsQuery.refetch();
 
           if (mode === "markdown") {
-            setEditingInstruction({
-              title: artifact.name?.trim() ?? "",
-              description: artifact.description?.trim() ?? "",
-              content: artifact.content?.trim() ?? "",
-            });
+            setSelectedInstruction(
+              artifactFromPrompt(artifact, likedPromptIds),
+            );
           }
         }}
       />
-
-      <Modal
-        isOpen={Boolean(editingInstruction)}
-        onClose={() => setEditingInstruction(null)}
-        aria-labelledby="instruction-edit-modal-title"
-      >
-        <Box column gap={3} p={4}>
-          <Heading id="instruction-edit-modal-title" as="h2">
-            Edit Instruction
-          </Heading>
-
-          <Box column gap={1}>
-            <Label htmlFor="instruction-edit-title" text="Title" />
-            <Input
-              id="instruction-edit-title"
-              value={editingInstruction?.title ?? ""}
-              onChange={(event) =>
-                setEditingInstruction((prev) =>
-                  prev ? { ...prev, title: event.target.value } : prev,
-                )
-              }
-            />
-          </Box>
-
-          <Box column gap={1}>
-            <Label htmlFor="instruction-edit-description" text="Description" />
-            <Textarea
-              id="instruction-edit-description"
-              rows={3}
-              value={editingInstruction?.description ?? ""}
-              onChange={(event) =>
-                setEditingInstruction((prev) =>
-                  prev ? { ...prev, description: event.target.value } : prev,
-                )
-              }
-            />
-          </Box>
-
-          <Box column gap={1}>
-            <Label htmlFor="instruction-edit-content" text="Content" />
-            <Textarea
-              id="instruction-edit-content"
-              rows={6}
-              value={editingInstruction?.content ?? ""}
-              onChange={(event) =>
-                setEditingInstruction((prev) =>
-                  prev ? { ...prev, content: event.target.value } : prev,
-                )
-              }
-            />
-          </Box>
-
-          <Box w={1} justifyContent="flex-end" gap={2}>
-            <Button
-              variant="secondaryDark"
-              onClick={() => setEditingInstruction(null)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="primaryDark"
-              onClick={() => setEditingInstruction(null)}
-            >
-              Save
-            </Button>
-          </Box>
-        </Box>
-      </Modal>
 
       <ArtifactDetailsModal
         isOpen={Boolean(selectedInstruction)}

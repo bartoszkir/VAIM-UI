@@ -1,8 +1,8 @@
-import type { UserInfo } from "../auth/types";
 import { httpClient } from "./httpClient";
+import type { CurrentUserDto } from "./types";
 
-export async function getCurrentUser(): Promise<UserInfo> {
-  return httpClient.get<UserInfo>("/auth/me", {
+export async function getCurrentUser(): Promise<CurrentUserDto> {
+  return httpClient.get<CurrentUserDto>("/auth/me", {
     expectedContentType: "application/json",
   });
 }
