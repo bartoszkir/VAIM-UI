@@ -45,11 +45,15 @@ type UploadToolOption = {
   label: string;
 };
 
+type UploadArtifactTypeOption = {
+  id: PromptType;
+  label: string;
+};
+
 type UploadArtifactModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  artifactType: PromptType;
-  artifactLabel: string;
+  artifactTypeOptions: UploadArtifactTypeOption[];
   availableTools: UploadToolOption[];
   availableTags: Array<string | ArtifactTag>;
   onAfterCreate?: (payload: UploadAfterCreatePayload) => void | Promise<void>;
@@ -58,8 +62,7 @@ type UploadArtifactModalProps = {
 export default function UploadArtifactModal({
   isOpen,
   onClose,
-  artifactType,
-  artifactLabel,
+  artifactTypeOptions,
   availableTools,
   availableTags,
   onAfterCreate,
@@ -71,6 +74,8 @@ export default function UploadArtifactModal({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [content, setContent] = useState("");
+  const [selectedArtifactType, setSelectedArtifactType] =
+    useState<PromptType | null>(null);
   const [selectedTools, setSelectedTools] = useState<ToolType[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [markdownFile, setMarkdownFile] = useState<File | null>(null);
@@ -101,6 +106,7 @@ export default function UploadArtifactModal({
     setTitle("");
     setDescription("");
     setContent("");
+    setSelectedArtifactType(null);
     setSelectedTools([]);
     setSelectedTags([]);
     setMarkdownFile(null);
@@ -158,8 +164,16 @@ export default function UploadArtifactModal({
     );
   };
 
+  const selectedArtifactTypeLabel =
+    artifactTypeOptions.find((option) => option.id === selectedArtifactType)
+      ?.label ?? "Artifact";
+
   const handleManualUpload = async () => {
     const errors: Record<string, string> = {};
+
+    if (!selectedArtifactType) {
+      errors.type = "Select an artifact type.";
+    }
 
     if (selectedTools.length === 0) {
       errors.tools = "Select at least one compatible AI tool.";
@@ -175,6 +189,11 @@ export default function UploadArtifactModal({
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
+      return;
+    }
+
+    const artifactType = selectedArtifactType;
+    if (!artifactType) {
       return;
     }
 
@@ -197,7 +216,7 @@ export default function UploadArtifactModal({
         });
       }
 
-      showSuccess(`${artifactLabel} uploaded successfully`);
+      showSuccess(`${selectedArtifactTypeLabel} uploaded successfully`);
       onClose();
     } catch (error) {
       showErrorToast(getErrorMessage(error));
@@ -209,6 +228,10 @@ export default function UploadArtifactModal({
   const handleMarkdownUpload = async () => {
     const errors: Record<string, string> = {};
 
+    if (!selectedArtifactType) {
+      errors.type = "Select an artifact type.";
+    }
+
     if (selectedTools.length === 0) {
       errors.tools = "Select at least one compatible AI tool.";
     }
@@ -219,6 +242,11 @@ export default function UploadArtifactModal({
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
+      return;
+    }
+
+    const artifactType = selectedArtifactType;
+    if (!artifactType) {
       return;
     }
 
@@ -250,7 +278,7 @@ export default function UploadArtifactModal({
         });
       }
 
-      showSuccess(`${artifactLabel} created from markdown`);
+      showSuccess(`${selectedArtifactTypeLabel} created from markdown`);
       onClose();
     } catch (error) {
       showErrorToast(getErrorMessage(error));
@@ -302,7 +330,7 @@ export default function UploadArtifactModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      aria-labelledby={`upload-${artifactLabel.toLowerCase()}-modal-title`}
+      aria-labelledby="upload-artifact-modal-title"
     >
       <Box
         position="absolute"
@@ -315,16 +343,38 @@ export default function UploadArtifactModal({
         gap={4}
         bg="white"
       >
-        <Heading
-          id={`upload-${artifactLabel.toLowerCase()}-modal-title`}
-          as="h2"
-          px={2}
-          pt={2}
-        >
-          Upload New {artifactLabel}
+        <Heading id="upload-artifact-modal-title" as="h2" px={2} pt={2}>
+          Upload New Artifact
         </Heading>
 
         <Box column overflow="auto" gap={3} py={2} px={2}>
+          <Box column gap={1.5}>
+            <T fontWeight="semibold">Artifact type *</T>
+            <Box w={1} flexWrap="wrap" gap={1.5}>
+              {artifactTypeOptions.map((artifactTypeOption) => (
+                <Tag
+                  key={artifactTypeOption.id}
+                  text={artifactTypeOption.label}
+                  isInteractive
+                  onClick={() => {
+                    setSelectedArtifactType(artifactTypeOption.id);
+                    clearFieldError("type");
+                  }}
+                  variant={
+                    selectedArtifactType === artifactTypeOption.id
+                      ? "subtleBlue"
+                      : "subtleGrey"
+                  }
+                />
+              ))}
+            </Box>
+            {fieldErrors.type ? (
+              <Message id="type-error" variant="error">
+                {fieldErrors.type}
+              </Message>
+            ) : null}
+          </Box>
+
           <Box column gap={1.5}>
             <T fontWeight="semibold">Compatible AI Tools *</T>
             <Box w={1} flexWrap="wrap" gap={1.5}>

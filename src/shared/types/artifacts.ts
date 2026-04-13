@@ -1,5 +1,8 @@
+import type { PromptType } from "../../api/types";
+
 export type ArtifactItem = {
   id: string;
+  type: PromptType;
   title: string;
   author: string;
   publishedAt: string;

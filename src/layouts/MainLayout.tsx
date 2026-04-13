@@ -4,10 +4,7 @@ import AppHeader from "./AppHeader";
 
 export default function MainLayout() {
   const sidemenuItems = [
-    { title: "Skills", path: "/skills", icon: "uiCode" },
-    { title: "Agents", path: "/agents", icon: "uiBrainCircuit" },
-    { title: "Prompts", path: "/prompts", icon: "uiBookOpen" },
-    { title: "Instructions", path: "/instructions", icon: "uiCogs" },
+    { title: "Artifacts", path: "/artifacts", icon: "uiDatabase" },
     { title: "Tags", path: "/tags", icon: "uiBookmark" },
   ];
 
@@ -27,7 +24,13 @@ export default function MainLayout() {
           items={sidemenuItems}
           onNavigate={handleNavigate}
         />
-        <Box column w={1} minH="calc(100vh - 72px)" bg="sandstone.95">
+        <Box
+          column
+          w={1}
+          h="calc(100vh - 72px)"
+          bg="sandstone.95"
+          overflow="auto"
+        >
           <Outlet />
         </Box>
       </Box>

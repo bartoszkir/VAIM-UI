@@ -27,6 +27,7 @@ export function artifactFromPrompt(
 
   return {
     id: prompt.id,
+    type: prompt.type,
     title,
     author,
     publishedAt: prompt.createdAt,

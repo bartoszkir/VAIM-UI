@@ -1,6 +1,5 @@
 export const PromptType = {
   Prompt: 1,
-  Agent: 2,
   Instruction: 3,
   Skill: 4,
 } as const;

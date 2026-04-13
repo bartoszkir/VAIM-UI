@@ -7,6 +7,9 @@ type ArtifactSearchFiltersCardProps = {
   searchPlaceholder: string;
   searchValue: string;
   onSearchChange: (value: string) => void;
+  typeFilters?: string[];
+  activeType?: string;
+  onTypeChange?: (type: string) => void;
   toolFilters?: string[];
   activeTool?: string;
   onToolChange?: (tool: string) => void;
@@ -22,6 +25,9 @@ export default function ArtifactSearchFiltersCard({
   searchPlaceholder,
   searchValue,
   onSearchChange,
+  typeFilters,
+  activeType,
+  onTypeChange,
   toolFilters,
   activeTool,
   onToolChange,
@@ -43,6 +49,27 @@ export default function ArtifactSearchFiltersCard({
           placeholder={searchPlaceholder}
         />
       </Box>
+
+      {typeFilters && typeFilters.length > 0 ? (
+        <Box column gap={1.5}>
+          <T fontWeight="semibold">Artifact type</T>
+          <Box w={1} flexWrap="wrap" gap={1.5}>
+            {typeFilters.map((typeFilter) => (
+              <Tag
+                key={typeFilter}
+                text={typeFilter}
+                isInteractive={Boolean(onTypeChange)}
+                onClick={
+                  onTypeChange ? () => onTypeChange(typeFilter) : undefined
+                }
+                variant={
+                  typeFilter === activeType ? "subtleBlue" : "subtleGrey"
+                }
+              />
+            ))}
+          </Box>
+        </Box>
+      ) : null}
 
       {toolFilters && toolFilters.length > 0 ? (
         <Box column gap={1.5}>
