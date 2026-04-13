@@ -15,7 +15,7 @@ import {
   useToast,
 } from "@veracity/vui";
 import { HttpError } from "../../api/httpClient";
-import ArtifactPageHeader from "../../shared/components/ArtifactPageHeader";
+import TagsPageHeader from "./components/TagsPageHeader";
 import {
   useArtifactTags,
   type ArtifactTagOption,
@@ -149,11 +149,9 @@ export default function TagsPage() {
 
   return (
     <Box column w={1} p={{ xs: 3, md: 4 }} gap={3}>
-      <ArtifactPageHeader
+      <TagsPageHeader
         title="Tags"
         subtitle="Manage reusable tags for prompts, skills, agents, and instructions."
-        uploadButtonLabel=""
-        onUpload={() => {}}
       />
 
       <Card w={1} p={{ xs: 3, md: 4 }} column gap={2}>

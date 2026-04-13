@@ -4,6 +4,7 @@ import AppHeader from "./AppHeader";
 
 export default function MainLayout() {
   const sidemenuItems = [
+    { title: "Bundles", path: "/bundles", icon: "uiLayerGroup" },
     { title: "Artifacts", path: "/artifacts", icon: "uiDatabase" },
     { title: "Tags", path: "/tags", icon: "uiBookmark" },
   ];

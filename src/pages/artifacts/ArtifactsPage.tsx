@@ -15,11 +15,11 @@ import {
 import { PromptType, ToolType } from "../../api/types";
 import { useUserInfo } from "../../auth/authContext";
 import type { ArtifactItem } from "../../shared/types/artifacts";
-import ArtifactCard from "../../shared/components/ArtifactCard";
-import ArtifactPageHeader from "../../shared/components/ArtifactPageHeader";
-import ArtifactSearchFiltersCard from "../../shared/components/ArtifactSearchFiltersCard";
-import UploadArtifactModal from "../../shared/components/UploadArtifactModal";
-import ArtifactDetailsModal from "../../shared/components/ArtifactDetailsModal";
+import ArtifactCard from "./components/ArtifactCard";
+import ArtifactPageHeader from "./components/ArtifactPageHeader";
+import ArtifactSearchFiltersCard from "./components/ArtifactSearchFiltersCard";
+import UploadArtifactModal from "./components/UploadArtifactModal";
+import ArtifactDetailsModal from "./components/ArtifactDetailsModal";
 import { useArtifactTags } from "../../shared/hooks/useArtifactTags";
 import { useBottomReach } from "../../shared/hooks/useBottomReach";
 import { artifactFromPrompt } from "../../shared/utils/artifactFromPrompt";

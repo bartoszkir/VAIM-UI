@@ -19,9 +19,9 @@ import {
 import DOMPurify from "dompurify";
 import { marked } from "marked";
 import { useToast } from "@veracity/vui";
-import { createPrompt, createPromptFromMarkdown } from "../../api/prompts";
-import { HttpError } from "../../api/httpClient";
-import type { PromptDto, PromptType, ToolType } from "../../api/types";
+import { createPrompt, createPromptFromMarkdown } from "../../../api/prompts";
+import { HttpError } from "../../../api/httpClient";
+import type { PromptDto, PromptType, ToolType } from "../../../api/types";
 
 const UploadMode = {
   Manual: "manual",

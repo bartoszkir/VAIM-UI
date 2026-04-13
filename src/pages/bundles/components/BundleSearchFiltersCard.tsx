@@ -1,15 +1,12 @@
 import { Box, Card, Input, Label, T, Tag } from "@veracity/vui";
-import type { ArtifactTagOption } from "../hooks/useArtifactTags";
+import type { ArtifactTagOption } from "../../../shared/hooks/useArtifactTags";
 
-type ArtifactSearchFiltersCardProps = {
+type BundleSearchFiltersCardProps = {
   searchId: string;
   searchLabel: string;
   searchPlaceholder: string;
   searchValue: string;
   onSearchChange: (value: string) => void;
-  typeFilters?: string[];
-  activeType?: string;
-  onTypeChange?: (type: string) => void;
   toolFilters?: string[];
   activeTool?: string;
   onToolChange?: (tool: string) => void;
@@ -19,15 +16,12 @@ type ArtifactSearchFiltersCardProps = {
   onClearTags?: () => void;
 };
 
-export default function ArtifactSearchFiltersCard({
+export default function BundleSearchFiltersCard({
   searchId,
   searchLabel,
   searchPlaceholder,
   searchValue,
   onSearchChange,
-  typeFilters,
-  activeType,
-  onTypeChange,
   toolFilters,
   activeTool,
   onToolChange,
@@ -35,7 +29,7 @@ export default function ArtifactSearchFiltersCard({
   activeTagIds,
   onTagChange,
   onClearTags,
-}: ArtifactSearchFiltersCardProps) {
+}: BundleSearchFiltersCardProps) {
   const selectedTagIds = activeTagIds ?? [];
 
   return (
@@ -49,27 +43,6 @@ export default function ArtifactSearchFiltersCard({
           placeholder={searchPlaceholder}
         />
       </Box>
-
-      {typeFilters && typeFilters.length > 0 ? (
-        <Box column gap={1.5}>
-          <T fontWeight="semibold">Artifact type</T>
-          <Box w={1} flexWrap="wrap" gap={1.5}>
-            {typeFilters.map((typeFilter) => (
-              <Tag
-                key={typeFilter}
-                text={typeFilter}
-                isInteractive={Boolean(onTypeChange)}
-                onClick={
-                  onTypeChange ? () => onTypeChange(typeFilter) : undefined
-                }
-                variant={
-                  typeFilter === activeType ? "subtleBlue" : "subtleGrey"
-                }
-              />
-            ))}
-          </Box>
-        </Box>
-      ) : null}
 
       {toolFilters && toolFilters.length > 0 ? (
         <Box column gap={1.5}>
@@ -115,25 +88,6 @@ export default function ArtifactSearchFiltersCard({
               />
             ))}
           </Box>
-
-          {selectedTagIds.length > 0 ? (
-            <Box w={1} alignItems="center" gap={1.5} flexWrap="wrap">
-              <T color="neutral.textSecondary">Active tags:</T>
-              {tags
-                .filter((tag) => selectedTagIds.includes(tag.id))
-                .map((tag) => (
-                  <Tag
-                    key={`active-${tag.id}`}
-                    text={tag.name}
-                    variant="subtleBlue"
-                    isInteractive={Boolean(onTagChange)}
-                    onClick={
-                      onTagChange ? () => onTagChange(tag.id) : undefined
-                    }
-                  />
-                ))}
-            </Box>
-          ) : null}
         </Box>
       ) : null}
     </Card>

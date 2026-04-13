@@ -19,13 +19,17 @@ import DOMPurify from "dompurify";
 import { marked } from "marked";
 import { useToast } from "@veracity/vui";
 import { copyToClipboard } from "@veracity/ui-utils";
-import { getPromptById, getToolTypes, updatePrompt } from "../../api/prompts";
-import { getTags } from "../../api/tags";
-import { HttpError } from "../../api/httpClient";
-import { PromptType, ToolType } from "../../api/types";
-import type { TagDto, ToolTypeDto } from "../../api/types";
-import { useUserInfo } from "../../auth/authContext";
-import { relativeTime } from "../utils/relativeTime";
+import {
+  getPromptById,
+  getToolTypes,
+  updatePrompt,
+} from "../../../api/prompts";
+import { getTags } from "../../../api/tags";
+import { HttpError } from "../../../api/httpClient";
+import { PromptType, ToolType } from "../../../api/types";
+import type { TagDto, ToolTypeDto } from "../../../api/types";
+import { useUserInfo } from "../../../auth/authContext";
+import { relativeTime } from "../../../shared/utils/relativeTime";
 
 type ArtifactDetailsModalProps = {
   isOpen: boolean;

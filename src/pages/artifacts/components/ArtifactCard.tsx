@@ -1,6 +1,6 @@
 import { Box, Button, Card, Heading, P, T, Tag } from "@veracity/vui";
-import type { ArtifactItem } from "../types/artifacts";
-import { relativeTime } from "../utils/relativeTime";
+import type { ArtifactItem } from "../../../shared/types/artifacts";
+import { relativeTime } from "../../../shared/utils/relativeTime";
 
 type ArtifactCardProps = {
   artifact: ArtifactItem;

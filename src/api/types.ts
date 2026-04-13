@@ -121,3 +121,65 @@ export type TagCreateRequest = {
 export type TagUpdateRequest = {
   name?: string | null;
 };
+
+export type BundleArtifactDto = {
+  id: string;
+  name?: string | null;
+  description?: string | null;
+  type: PromptType;
+  toolTypes?: ToolType[] | null;
+  tags?: TagDto[] | null;
+};
+
+export type BundleDto = {
+  id: string;
+  name?: string | null;
+  description?: string | null;
+  authorId: string;
+  authorDisplayName?: string | null;
+  createdAt: string;
+  updatedAt?: string | null;
+  isDynamic: boolean;
+  toolTypes?: ToolType[] | null;
+  tags?: TagDto[] | null;
+  artifacts?: BundleArtifactDto[] | null;
+};
+
+export type BundleDtoPagedResult = {
+  items?: BundleDto[] | null;
+  totalCount: number;
+  page: number;
+  pageSize: number;
+};
+
+export type BundlePagedParams = {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  toolType?: ToolType;
+  tagIds?: string[];
+};
+
+export type BundleGenerateRequest = {
+  prompt: string;
+};
+
+export type BundleUpdateRequest = {
+  name: string;
+  description: string;
+  artifactIds: string[];
+  toolTypes?: ToolType[] | null;
+  tagIds?: string[] | null;
+};
+
+export type BundleCreateRequest = {
+  name: string;
+  description: string;
+  artifactIds: string[];
+  toolTypes?: ToolType[] | null;
+  tagIds?: string[] | null;
+};
+
+export type BundleDownloadByArtifactIdsRequest = {
+  artifactIds: string[];
+};
