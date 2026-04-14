@@ -12,14 +12,17 @@ import {
   likePrompt,
   unlikePrompt,
 } from "../../api/prompts";
+import { downloadBundleZipByArtifactIds } from "../../api/bundles";
 import { PromptType, ToolType } from "../../api/types";
 import { useUserInfo } from "../../auth/authContext";
 import type { ArtifactItem } from "../../shared/types/artifacts";
+import { useCollection } from "../../shared/hooks/useCollection";
 import ArtifactCard from "./components/ArtifactCard";
 import ArtifactPageHeader from "./components/ArtifactPageHeader";
 import ArtifactSearchFiltersCard from "./components/ArtifactSearchFiltersCard";
 import UploadArtifactModal from "./components/UploadArtifactModal";
 import ArtifactDetailsModal from "./components/ArtifactDetailsModal";
+import CollectionModal from "./components/CollectionModal";
 import { useArtifactTags } from "../../shared/hooks/useArtifactTags";
 import { useBottomReach } from "../../shared/hooks/useBottomReach";
 import { artifactFromPrompt } from "../../shared/utils/artifactFromPrompt";
@@ -73,6 +76,13 @@ export default function ArtifactsPage() {
   const [selectedArtifact, setSelectedArtifact] = useState<ArtifactItem | null>(
     null,
   );
+  const [isCollectionModalOpen, setIsCollectionModalOpen] = useState(false);
+  const {
+    collection,
+    toggleInCollection,
+    clearCollection,
+    removeFromCollection,
+  } = useCollection();
   const { tags, tagsById } = useArtifactTags();
 
   const likedPromptIdsQuery = useQuery({
@@ -228,6 +238,8 @@ export default function ArtifactsPage() {
         subtitle="Discover and share skills, prompts, and instructions in one place."
         uploadButtonLabel="+ Upload artifact"
         onUpload={() => setIsUploadModalOpen(true)}
+        collectionCount={collection.size}
+        onOpenCollection={() => setIsCollectionModalOpen(true)}
       />
 
       <ArtifactSearchFiltersCard
@@ -283,6 +295,8 @@ export default function ArtifactsPage() {
                 artifact={artifact}
                 onLike={handleLikeArtifact}
                 onViewDetails={setSelectedArtifact}
+                isInCollection={collection.has(artifact.id)}
+                onToggleCollection={toggleInCollection}
               />
             ))}
           </Grid>
@@ -328,6 +342,25 @@ export default function ArtifactsPage() {
         onAfterSave={async () => {
           await artifactsQuery.refetch();
         }}
+      />
+
+      <CollectionModal
+        isOpen={isCollectionModalOpen}
+        onClose={() => setIsCollectionModalOpen(false)}
+        artifacts={visibleArtifacts}
+        collectionIds={collection}
+        onDownload={async (artifactIds) => {
+          await downloadBundleZipByArtifactIds({ artifactIds });
+        }}
+        onCreateBundle={(artifactIds) => {
+          // TODO: Implement bundle creation with pre-filled artifacts
+          console.log("Create bundle with artifacts:", artifactIds);
+          setIsCollectionModalOpen(false);
+        }}
+        onClear={() => {
+          clearCollection();
+        }}
+        onRemoveItem={removeFromCollection}
       />
     </Box>
   );

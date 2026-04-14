@@ -1,4 +1,4 @@
-import { Box, Button, Card, Heading, P, T, Tag } from "@veracity/vui";
+import { Box, Button, Card, Checkbox, Heading, P, T, Tag } from "@veracity/vui";
 import type { ArtifactItem } from "../../../shared/types/artifacts";
 import { relativeTime } from "../../../shared/utils/relativeTime";
 
@@ -7,6 +7,8 @@ type ArtifactCardProps = {
   onViewDetails: (artifact: ArtifactItem) => void;
   onLike?: (artifact: ArtifactItem) => void;
   viewDetailsLabel?: string;
+  isInCollection?: boolean;
+  onToggleCollection?: (artifactId: string) => void;
 };
 
 export default function ArtifactCard({
@@ -14,6 +16,8 @@ export default function ArtifactCard({
   onViewDetails,
   onLike,
   viewDetailsLabel = "View details",
+  isInCollection = false,
+  onToggleCollection,
 }: ArtifactCardProps) {
   return (
     <Card p={{ xs: 3, md: 4 }} column gap={2.5}>
@@ -63,10 +67,18 @@ export default function ArtifactCard({
       ) : null}
 
       <Box w={1} justifyContent="space-between" alignItems="center" mt={1}>
-        <T color="neutral.textSecondary">{artifact.comments} comments</T>
-        <T color="neutral.textSecondary">
-          Updated {relativeTime(artifact.updatedAt)}
-        </T>
+        <Checkbox
+          checked={isInCollection}
+          onChange={() => onToggleCollection?.(artifact.id)}
+          label="Add to Collection"
+          id={`collection-${artifact.id}`}
+        />
+        <Box gap={2}>
+          <T color="neutral.textSecondary">{artifact.comments} comments</T>
+          <T color="neutral.textSecondary">
+            Updated {relativeTime(artifact.updatedAt)}
+          </T>
+        </Box>
       </Box>
 
       <Box w={1} justifyContent="flex-end" mt={1}>
