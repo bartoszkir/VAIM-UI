@@ -66,9 +66,6 @@ export default function BundleCard({ bundle }: BundleCardProps) {
         <T color="neutral.textSecondary">
           Updated {relativeTime(bundle.updatedAt)}
         </T>
-      </Box>
-
-      <Box w={1} justifyContent="flex-end" mt={1}>
         <Button
           variant="tertiaryDark"
           onClick={() => openBundleDetails({ bundleId: bundle.id })}

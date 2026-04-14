@@ -1,4 +1,4 @@
-import { Box, Button, Card, Checkbox, Heading, P, T, Tag } from "@veracity/vui";
+import { Box, Button, Card, Heading, P, T, Tag } from "@veracity/vui";
 import type { ArtifactItem } from "../../../shared/types/artifacts";
 import { relativeTime } from "../../../shared/utils/relativeTime";
 import { useModal } from "../../../shared/modals/ModalContext";
@@ -25,6 +25,16 @@ export default function ArtifactCard({
       <Box w={1} justifyContent="space-between" alignItems="flex-start" gap={2}>
         <Heading as="h3">{artifact.title}</Heading>
         <Box gap={1}>
+          <Button
+            isRound
+            variant={isInCollection ? "primaryDark" : "tertiaryDark"}
+            size="sm"
+            icon={isInCollection ? "uiFolderCheck" : "uiFolderPlus"}
+            aria-label={
+              isInCollection ? "Remove from Collection" : "Add to Collection"
+            }
+            onClick={() => onToggleCollection?.(artifact.id)}
+          />
           <Button
             isRound
             variant={artifact.isFavorite ? "primaryDark" : "tertiaryDark"}
@@ -68,21 +78,12 @@ export default function ArtifactCard({
       ) : null}
 
       <Box w={1} justifyContent="space-between" alignItems="center" mt={1}>
-        <Checkbox
-          checked={isInCollection}
-          onChange={() => onToggleCollection?.(artifact.id)}
-          label="Add to Collection"
-          id={`collection-${artifact.id}`}
-        />
         <Box gap={2}>
           <T color="neutral.textSecondary">{artifact.comments} comments</T>
           <T color="neutral.textSecondary">
             Updated {relativeTime(artifact.updatedAt)}
           </T>
         </Box>
-      </Box>
-
-      <Box w={1} justifyContent="flex-end" mt={1}>
         <Button
           variant="tertiaryDark"
           onClick={() =>

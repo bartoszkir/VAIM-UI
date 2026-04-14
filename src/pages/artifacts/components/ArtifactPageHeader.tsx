@@ -29,7 +29,7 @@ export default function ArtifactPageHeader({
       <Box gap={1} alignItems="center">
         <Button
           variant="tertiaryDark"
-          iconLeft="uiShoppingCart"
+          iconLeft="uiFolders"
           onClick={onOpenCollection}
         >
           {collectionLabel}
