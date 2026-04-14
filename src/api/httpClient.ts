@@ -62,7 +62,7 @@ class HttpClient {
 
   private async parseResponseBody(
     response: Response,
-    expectedContentType?: string,
+    expectedContentType: string = "application/json",
   ): Promise<unknown> {
     if (response.status === 204) {
       return null;
