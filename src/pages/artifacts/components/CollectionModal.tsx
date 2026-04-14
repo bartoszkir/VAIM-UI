@@ -36,6 +36,7 @@ export default function CollectionModal({
   onRemoveItem,
 }: CollectionModalProps) {
   const selectedArtifacts = artifacts.filter((a) => collectionIds.has(a.id));
+  const hasSelectedArtifacts = selectedArtifacts.length > 0;
   const isDownloading = false; // TODO: Add loading state
 
   const handleDownload = async () => {
@@ -67,6 +68,7 @@ export default function CollectionModal({
             size="sm"
             onClick={onClose}
             iconLeft="uiClose"
+            aria-label="Close collection modal"
           />
         </Box>
 
@@ -113,29 +115,34 @@ export default function CollectionModal({
         </Box>
 
         <Box gap={2} w={1} justifyContent="flex-end">
-          <Button
-            variant="tertiaryDark"
-            onClick={() => {
-              onClear();
-              onClose();
-            }}
-          >
-            Clear Collection
+          <Button variant="secondaryDark" onClick={onClose}>
+            Close
           </Button>
+          {hasSelectedArtifacts ? (
+            <Button
+              variant="tertiaryDark"
+              onClick={() => {
+                onClear();
+                onClose();
+              }}
+            >
+              Clear Collection
+            </Button>
+          ) : null}
           <Button
             variant="tertiaryDark"
             onClick={() => {
               onCreateBundle(Array.from(collectionIds));
               onClose();
             }}
-            disabled={selectedArtifacts.length === 0}
+            disabled={!hasSelectedArtifacts}
           >
             Create Bundle
           </Button>
           <Button
             variant="primaryDark"
             onClick={handleDownload}
-            disabled={selectedArtifacts.length === 0 || isDownloading}
+            disabled={!hasSelectedArtifacts || isDownloading}
             iconLeft={isDownloading ? "uiSpinner" : "uiDownload"}
           >
             Download as Zip
