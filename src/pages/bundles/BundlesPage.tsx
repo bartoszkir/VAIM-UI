@@ -11,13 +11,12 @@ import {
   Textarea,
 } from "@veracity/vui";
 import { generateDynamicBundle, getPagedBundles } from "../../api/bundles";
-import type { BundleDto } from "../../api/types";
 import BundlePageHeader from "./components/BundlePageHeader";
 import BundleCard from "./components/BundleCard";
-import BundleDetailsModal from "./components/BundleDetailsModal";
 import BundleSearchFiltersCard from "./components/BundleSearchFiltersCard";
 import { useBottomReach } from "../../shared/hooks/useBottomReach";
 import { bundleFromDto } from "../../shared/utils/bundleFromDto";
+import { useModal } from "../../shared/modals/ModalContext";
 
 const PAGE_SIZE = 12;
 
@@ -28,10 +27,7 @@ export default function BundlesPage() {
   const [dynamicPromptValue, setDynamicPromptValue] = useState("");
   const [isGeneratingDynamicBundle, setIsGeneratingDynamicBundle] =
     useState(false);
-  const [selectedBundleId, setSelectedBundleId] = useState<string | null>(null);
-  const [selectedBundleData, setSelectedBundleData] = useState<
-    BundleDto | undefined
-  >(undefined);
+  const { openBundleDetails } = useModal();
 
   const bundlesQuery = useInfiniteQuery({
     queryKey: ["bundles", searchValue],
@@ -90,8 +86,7 @@ export default function BundlesPage() {
       });
 
       await queryClient.invalidateQueries({ queryKey: ["bundles"] });
-      setSelectedBundleId(null);
-      setSelectedBundleData(dynamicBundle);
+      openBundleDetails({ preloadedBundle: dynamicBundle });
     } finally {
       setIsGeneratingDynamicBundle(false);
     }
@@ -172,14 +167,7 @@ export default function BundlesPage() {
             gridTemplateColumns={{ sm: "1fr", md: "1fr 1fr", lg: "1fr 1fr" }}
           >
             {visibleBundles.map((bundle) => (
-              <BundleCard
-                key={bundle.id}
-                bundle={bundle}
-                onViewDetails={(selectedBundle) => {
-                  setSelectedBundleData(undefined);
-                  setSelectedBundleId(selectedBundle.id);
-                }}
-              />
+              <BundleCard key={bundle.id} bundle={bundle} />
             ))}
           </Grid>
 
@@ -191,20 +179,6 @@ export default function BundlesPage() {
           ) : null}
         </>
       )}
-
-      <BundleDetailsModal
-        isOpen={Boolean(selectedBundleId || selectedBundleData)}
-        onClose={() => {
-          setSelectedBundleId(null);
-          setSelectedBundleData(undefined);
-        }}
-        bundleId={selectedBundleId}
-        preloadedBundle={selectedBundleData}
-        onAfterSave={async (savedBundle) => {
-          setSelectedBundleData(savedBundle);
-          await bundlesQuery.refetch();
-        }}
-      />
     </Box>
   );
 }

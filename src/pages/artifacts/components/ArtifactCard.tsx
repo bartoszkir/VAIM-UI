@@ -1,10 +1,10 @@
 import { Box, Button, Card, Checkbox, Heading, P, T, Tag } from "@veracity/vui";
 import type { ArtifactItem } from "../../../shared/types/artifacts";
 import { relativeTime } from "../../../shared/utils/relativeTime";
+import { useModal } from "../../../shared/modals/ModalContext";
 
 type ArtifactCardProps = {
   artifact: ArtifactItem;
-  onViewDetails: (artifact: ArtifactItem) => void;
   onLike?: (artifact: ArtifactItem) => void;
   viewDetailsLabel?: string;
   isInCollection?: boolean;
@@ -13,12 +13,13 @@ type ArtifactCardProps = {
 
 export default function ArtifactCard({
   artifact,
-  onViewDetails,
   onLike,
   viewDetailsLabel = "View details",
   isInCollection = false,
   onToggleCollection,
 }: ArtifactCardProps) {
+  const { openArtifactDetails } = useModal();
+
   return (
     <Card p={{ xs: 3, md: 4 }} column gap={2.5}>
       <Box w={1} justifyContent="space-between" alignItems="flex-start" gap={2}>
@@ -82,7 +83,15 @@ export default function ArtifactCard({
       </Box>
 
       <Box w={1} justifyContent="flex-end" mt={1}>
-        <Button variant="tertiaryDark" onClick={() => onViewDetails(artifact)}>
+        <Button
+          variant="tertiaryDark"
+          onClick={() =>
+            openArtifactDetails({
+              artifactId: artifact.id,
+              artifactType: artifact.type,
+            })
+          }
+        >
           {viewDetailsLabel}
         </Button>
       </Box>

@@ -12,20 +12,16 @@ import {
   likePrompt,
   unlikePrompt,
 } from "../../api/prompts";
-import { downloadBundleZipByArtifactIds } from "../../api/bundles";
 import { PromptType, ToolType } from "../../api/types";
 import { useUserInfo } from "../../auth/authContext";
 import type { ArtifactItem } from "../../shared/types/artifacts";
-import { useCollection } from "../../shared/hooks/useCollection";
 import ArtifactCard from "./components/ArtifactCard";
 import ArtifactPageHeader from "./components/ArtifactPageHeader";
 import ArtifactSearchFiltersCard from "./components/ArtifactSearchFiltersCard";
-import UploadArtifactModal from "./components/UploadArtifactModal";
-import ArtifactDetailsModal from "./components/ArtifactDetailsModal";
-import CollectionModal from "./components/CollectionModal";
 import { useArtifactTags } from "../../shared/hooks/useArtifactTags";
 import { useBottomReach } from "../../shared/hooks/useBottomReach";
 import { artifactFromPrompt } from "../../shared/utils/artifactFromPrompt";
+import { useModal } from "../../shared/modals/ModalContext";
 
 const TOOL_FILTERS = [
   { label: "All Tools", value: undefined },
@@ -40,26 +36,9 @@ const ARTIFACT_TYPE_FILTERS = [
   { label: "Instruction", value: PromptType.Instruction },
 ];
 
-const UPLOAD_ARTIFACT_TYPE_OPTIONS = ARTIFACT_TYPE_FILTERS.flatMap(
-  (typeFilter) =>
-    typeFilter.value ? [{ id: typeFilter.value, label: typeFilter.label }] : [],
-);
-
 const DEFAULT_TOOL_FILTER_LABEL = "All Tools";
 const DEFAULT_ARTIFACT_TYPE_LABEL = "All";
 const PAGE_SIZE = 12;
-
-function getArtifactLabelByType(type: PromptType): string {
-  if (type === PromptType.Skill) {
-    return "Skill";
-  }
-
-  if (type === PromptType.Prompt) {
-    return "Prompt";
-  }
-
-  return "Instruction";
-}
 
 export default function ArtifactsPage() {
   const userInfo = useUserInfo();
@@ -72,17 +51,8 @@ export default function ArtifactsPage() {
     PromptType | undefined
   >(undefined);
   const [activeTagIds, setActiveTagIds] = useState<string[]>([]);
-  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [selectedArtifact, setSelectedArtifact] = useState<ArtifactItem | null>(
-    null,
-  );
-  const [isCollectionModalOpen, setIsCollectionModalOpen] = useState(false);
-  const {
-    collection,
-    toggleInCollection,
-    clearCollection,
-    removeFromCollection,
-  } = useCollection();
+  const { collection, toggleInCollection, openUploadArtifact, openCollection } =
+    useModal();
   const { tags, tagsById } = useArtifactTags();
 
   const likedPromptIdsQuery = useQuery({
@@ -180,11 +150,6 @@ export default function ArtifactsPage() {
     likePromptMutation.mutate(artifact.id);
   };
 
-  const artifactTagOptions = useMemo(
-    () => tags.map((tag) => ({ id: tag.id, name: tag.name })),
-    [tags],
-  );
-
   const handleTagChange = (tagId: string) => {
     setActiveTagIds((prev) =>
       prev.includes(tagId)
@@ -237,9 +202,9 @@ export default function ArtifactsPage() {
         title="Artifacts"
         subtitle="Discover and share skills, prompts, and instructions in one place."
         uploadButtonLabel="+ Upload artifact"
-        onUpload={() => setIsUploadModalOpen(true)}
+        onUpload={openUploadArtifact}
         collectionCount={collection.size}
-        onOpenCollection={() => setIsCollectionModalOpen(true)}
+        onOpenCollection={() => openCollection(visibleArtifacts)}
       />
 
       <ArtifactSearchFiltersCard
@@ -294,7 +259,6 @@ export default function ArtifactsPage() {
                 key={artifact.id}
                 artifact={artifact}
                 onLike={handleLikeArtifact}
-                onViewDetails={setSelectedArtifact}
                 isInCollection={collection.has(artifact.id)}
                 onToggleCollection={toggleInCollection}
               />
@@ -309,59 +273,6 @@ export default function ArtifactsPage() {
           ) : null}
         </>
       )}
-
-      <UploadArtifactModal
-        isOpen={isUploadModalOpen}
-        onClose={() => setIsUploadModalOpen(false)}
-        artifactTypeOptions={UPLOAD_ARTIFACT_TYPE_OPTIONS}
-        availableTools={TOOL_FILTERS.flatMap((toolFilter) =>
-          toolFilter.value
-            ? [{ id: toolFilter.value, label: toolFilter.label }]
-            : [],
-        )}
-        availableTags={artifactTagOptions}
-        onAfterCreate={async ({ mode, artifact }) => {
-          await artifactsQuery.refetch();
-
-          if (mode === "markdown") {
-            setSelectedArtifact(artifactFromPrompt(artifact, likedPromptIds));
-          }
-        }}
-      />
-
-      <ArtifactDetailsModal
-        isOpen={Boolean(selectedArtifact)}
-        onClose={() => setSelectedArtifact(null)}
-        artifactId={selectedArtifact?.id ?? null}
-        artifactType={selectedArtifact?.type ?? PromptType.Skill}
-        artifactLabel={
-          selectedArtifact
-            ? getArtifactLabelByType(selectedArtifact.type)
-            : "Artifact"
-        }
-        onAfterSave={async () => {
-          await artifactsQuery.refetch();
-        }}
-      />
-
-      <CollectionModal
-        isOpen={isCollectionModalOpen}
-        onClose={() => setIsCollectionModalOpen(false)}
-        artifacts={visibleArtifacts}
-        collectionIds={collection}
-        onDownload={async (artifactIds) => {
-          await downloadBundleZipByArtifactIds({ artifactIds });
-        }}
-        onCreateBundle={(artifactIds) => {
-          // TODO: Implement bundle creation with pre-filled artifacts
-          console.log("Create bundle with artifacts:", artifactIds);
-          setIsCollectionModalOpen(false);
-        }}
-        onClear={() => {
-          clearCollection();
-        }}
-        onRemoveItem={removeFromCollection}
-      />
     </Box>
   );
 }

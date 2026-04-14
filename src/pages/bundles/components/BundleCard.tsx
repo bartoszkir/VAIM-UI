@@ -1,13 +1,15 @@
 import { Box, Button, Card, Heading, P, T, Tag } from "@veracity/vui";
 import type { BundleItem } from "../../../shared/types/bundles";
 import { relativeTime } from "../../../shared/utils/relativeTime";
+import { useModal } from "../../../shared/modals/ModalContext";
 
 type BundleCardProps = {
   bundle: BundleItem;
-  onViewDetails: (bundle: BundleItem) => void;
 };
 
-export default function BundleCard({ bundle, onViewDetails }: BundleCardProps) {
+export default function BundleCard({ bundle }: BundleCardProps) {
+  const { openBundleDetails } = useModal();
+
   return (
     <Card p={{ xs: 3, md: 4 }} column gap={2.5}>
       <Box w={1} justifyContent="space-between" alignItems="flex-start" gap={2}>
@@ -67,7 +69,10 @@ export default function BundleCard({ bundle, onViewDetails }: BundleCardProps) {
       </Box>
 
       <Box w={1} justifyContent="flex-end" mt={1}>
-        <Button variant="tertiaryDark" onClick={() => onViewDetails(bundle)}>
+        <Button
+          variant="tertiaryDark"
+          onClick={() => openBundleDetails({ bundleId: bundle.id })}
+        >
           View details
         </Button>
       </Box>

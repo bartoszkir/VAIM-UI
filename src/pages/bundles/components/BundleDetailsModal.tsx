@@ -51,6 +51,7 @@ type BundleDetailsModalProps = {
   onClose: () => void;
   bundleId: string | null;
   preloadedBundle?: BundleDto;
+  initialArtifacts?: BundleArtifactItem[];
   onAfterSave?: (savedBundle: BundleDto) => void | Promise<void>;
 };
 
@@ -98,6 +99,7 @@ export default function BundleDetailsModal({
   onClose,
   bundleId,
   preloadedBundle,
+  initialArtifacts,
   onAfterSave,
 }: BundleDetailsModalProps) {
   const { showSuccess, showError: showErrorToast } = useToast();
@@ -171,6 +173,9 @@ export default function BundleDetailsModal({
       setIsEditMode(false);
       setIsStaticCreationMode(false);
       setIsSaving(false);
+      setTitle("");
+      setDescription("");
+      setEditableArtifacts([]);
       setFieldErrors({});
       setArtifactSearch("");
       setSavedBundleOverride(null);
@@ -179,9 +184,29 @@ export default function BundleDetailsModal({
     previousIsOpenRef.current = isOpen;
   }, [isOpen]);
 
+  useEffect(() => {
+    if (
+      !isOpen ||
+      !initialArtifacts ||
+      initialArtifacts.length === 0 ||
+      bundleId ||
+      preloadedBundle
+    ) {
+      return;
+    }
+
+    setTitle("");
+    setDescription("");
+    setEditableArtifacts(initialArtifacts);
+    setArtifactSearch("");
+    setFieldErrors({});
+    setIsStaticCreationMode(false);
+    setIsEditMode(true);
+  }, [isOpen, initialArtifacts, bundleId, preloadedBundle]);
+
   const resetFromBundle = () => {
     if (!bundle) {
-      setIsEditMode(false);
+      onClose();
       return;
     }
 
@@ -234,9 +259,7 @@ export default function BundleDetailsModal({
   };
 
   const handleSave = async () => {
-    if (!bundle) {
-      return;
-    }
+    const isCreateMode = !bundle || bundle.isDynamic || isStaticCreationMode;
 
     const errors: Record<string, string> = {};
 
@@ -258,13 +281,13 @@ export default function BundleDetailsModal({
     try {
       let savedBundle: BundleDto;
 
-      if (bundle.isDynamic || isStaticCreationMode) {
+      if (isCreateMode) {
         savedBundle = await createBundle({
           name: title.trim(),
           description: description.trim(),
           artifactIds: editableArtifacts.map((artifact) => artifact.id),
         });
-        showSuccess("Static bundle created");
+        showSuccess("Bundle created successfully");
       } else {
         savedBundle = await updateBundle(bundle.id, {
           name: title.trim(),
@@ -302,7 +325,8 @@ export default function BundleDetailsModal({
     [artifactSearchQuery.data],
   );
 
-  const modalTitle = bundle?.title || "Bundle details";
+  const modalTitle =
+    bundle?.title || (isEditMode ? "Create bundle" : "Bundle details");
   const metadataPublishedAt = toReadableTimestamp(bundleQueryData?.createdAt);
   const metadataUpdatedAt = toReadableTimestamp(
     bundleQueryData?.updatedAt ?? bundleQueryData?.createdAt,
@@ -382,14 +406,14 @@ export default function BundleDetailsModal({
               </Button>
             </Box>
           </Box>
-        ) : bundle ? (
+        ) : bundle || isEditMode ? (
           <>
             <Box column overflow="auto" gap={3} py={2} px={2}>
               {fieldErrors.form ? (
                 <Message variant="error">{fieldErrors.form}</Message>
               ) : null}
 
-              {!isEditMode ? (
+              {!isEditMode && bundle ? (
                 <>
                   <Box column gap={1}>
                     <T fontWeight="semibold">Description</T>
@@ -428,7 +452,7 @@ export default function BundleDetailsModal({
                     </Box>
                   </Box>
                 </>
-              ) : (
+              ) : isEditMode ? (
                 <>
                   <Box column gap={1}>
                     <Label
@@ -584,36 +608,40 @@ export default function BundleDetailsModal({
                     </Box>
                   </Box>
                 </>
-              )}
+              ) : null}
             </Box>
 
             <Box w={1} justifyContent="flex-end" gap={2} px={2} pb={2}>
               {!isEditMode ? (
                 <>
-                  <Button variant="secondaryDark" onClick={handleDownload}>
-                    Download bundle
-                  </Button>
-                  {bundle.isDynamic ? (
-                    <Button
-                      variant="primaryDark"
-                      onClick={() => {
-                        setIsStaticCreationMode(true);
-                        setIsEditMode(true);
-                      }}
-                    >
-                      Create static bundle
+                  {bundle ? (
+                    <Button variant="secondaryDark" onClick={handleDownload}>
+                      Download bundle
                     </Button>
-                  ) : (
-                    <Button
-                      variant="primaryDark"
-                      onClick={() => {
-                        setIsStaticCreationMode(false);
-                        setIsEditMode(true);
-                      }}
-                    >
-                      Edit bundle
-                    </Button>
-                  )}
+                  ) : null}
+                  {bundle ? (
+                    bundle.isDynamic ? (
+                      <Button
+                        variant="primaryDark"
+                        onClick={() => {
+                          setIsStaticCreationMode(true);
+                          setIsEditMode(true);
+                        }}
+                      >
+                        Create static bundle
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="primaryDark"
+                        onClick={() => {
+                          setIsStaticCreationMode(false);
+                          setIsEditMode(true);
+                        }}
+                      >
+                        Edit bundle
+                      </Button>
+                    )
+                  ) : null}
                   <Button variant="secondaryDark" onClick={onClose}>
                     Close
                   </Button>
@@ -634,8 +662,8 @@ export default function BundleDetailsModal({
                   >
                     {isSaving
                       ? "Saving..."
-                      : bundle.isDynamic || isStaticCreationMode
-                        ? "Create static bundle"
+                      : !bundle || bundle.isDynamic || isStaticCreationMode
+                        ? "Create bundle"
                         : "Save changes"}
                   </Button>
                 </>
