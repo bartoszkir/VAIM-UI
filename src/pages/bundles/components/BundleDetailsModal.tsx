@@ -23,7 +23,11 @@ import {
   updateBundle,
 } from "../../../api/bundles";
 import { getPagedPrompts } from "../../../api/prompts";
-import type { BundleArtifactDto, PromptDto } from "../../../api/types";
+import type {
+  BundleArtifactDto,
+  BundleDto,
+  PromptDto,
+} from "../../../api/types";
 import { PromptType, ToolType } from "../../../api/types";
 import type { BundleArtifactItem } from "../../../shared/types/bundles";
 import { bundleFromDto } from "../../../shared/utils/bundleFromDto";
@@ -46,7 +50,8 @@ type BundleDetailsModalProps = {
   isOpen: boolean;
   onClose: () => void;
   bundleId: string | null;
-  onAfterSave?: () => void | Promise<void>;
+  preloadedBundle?: BundleDto;
+  onAfterSave?: (savedBundle: BundleDto) => void | Promise<void>;
 };
 
 function toReadableTimestamp(value?: string | null): string {
@@ -92,6 +97,7 @@ export default function BundleDetailsModal({
   isOpen,
   onClose,
   bundleId,
+  preloadedBundle,
   onAfterSave,
 }: BundleDetailsModalProps) {
   const { showSuccess, showError: showErrorToast } = useToast();
@@ -107,16 +113,23 @@ export default function BundleDetailsModal({
     BundleArtifactItem[]
   >([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [savedBundleOverride, setSavedBundleOverride] =
+    useState<BundleDto | null>(null);
+  const shouldFetchBundle =
+    isOpen && Boolean(bundleId) && !preloadedBundle && !savedBundleOverride;
 
   const bundleQuery = useQuery({
     queryKey: ["bundle-details", bundleId],
     queryFn: () => getBundleById(bundleId as string),
-    enabled: isOpen && Boolean(bundleId),
+    enabled: shouldFetchBundle,
   });
 
+  const bundleQueryData =
+    savedBundleOverride ?? preloadedBundle ?? bundleQuery.data;
+
   const bundle = useMemo(
-    () => (bundleQuery.data ? bundleFromDto(bundleQuery.data) : null),
-    [bundleQuery.data],
+    () => (bundleQueryData ? bundleFromDto(bundleQueryData) : null),
+    [bundleQueryData],
   );
 
   const artifactSearchQuery = useQuery({
@@ -160,6 +173,7 @@ export default function BundleDetailsModal({
       setIsSaving(false);
       setFieldErrors({});
       setArtifactSearch("");
+      setSavedBundleOverride(null);
     }
 
     previousIsOpenRef.current = isOpen;
@@ -242,15 +256,17 @@ export default function BundleDetailsModal({
     setIsSaving(true);
 
     try {
+      let savedBundle: BundleDto;
+
       if (bundle.isDynamic || isStaticCreationMode) {
-        await createBundle({
+        savedBundle = await createBundle({
           name: title.trim(),
           description: description.trim(),
           artifactIds: editableArtifacts.map((artifact) => artifact.id),
         });
         showSuccess("Static bundle created");
       } else {
-        await updateBundle(bundle.id, {
+        savedBundle = await updateBundle(bundle.id, {
           name: title.trim(),
           description: description.trim(),
           artifactIds: editableArtifacts.map((artifact) => artifact.id),
@@ -258,9 +274,13 @@ export default function BundleDetailsModal({
         showSuccess("Bundle updated successfully");
       }
 
-      await bundleQuery.refetch();
+      setSavedBundleOverride(savedBundle);
+
+      if (shouldFetchBundle) {
+        await bundleQuery.refetch();
+      }
       if (onAfterSave) {
-        await onAfterSave();
+        await onAfterSave(savedBundle);
       }
 
       setIsEditMode(false);
@@ -283,9 +303,9 @@ export default function BundleDetailsModal({
   );
 
   const modalTitle = bundle?.title || "Bundle details";
-  const metadataPublishedAt = toReadableTimestamp(bundleQuery.data?.createdAt);
+  const metadataPublishedAt = toReadableTimestamp(bundleQueryData?.createdAt);
   const metadataUpdatedAt = toReadableTimestamp(
-    bundleQuery.data?.updatedAt ?? bundleQuery.data?.createdAt,
+    bundleQueryData?.updatedAt ?? bundleQueryData?.createdAt,
   );
 
   return (
@@ -343,11 +363,11 @@ export default function BundleDetailsModal({
           ) : null}
         </Box>
 
-        {bundleQuery.isPending ? (
+        {shouldFetchBundle && bundleQuery.isPending ? (
           <Box w={1} justifyContent="center" py={6}>
             <Spinner aria-label="Loading bundle details" />
           </Box>
-        ) : bundleQuery.isError ? (
+        ) : shouldFetchBundle && bundleQuery.isError ? (
           <Box column gap={2} px={2} pb={2}>
             <Message variant="error">Unable to load bundle details.</Message>
             <Box w={1} justifyContent="flex-end" gap={2}>

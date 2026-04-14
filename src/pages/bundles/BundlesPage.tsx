@@ -11,48 +11,36 @@ import {
   Textarea,
 } from "@veracity/vui";
 import { generateDynamicBundle, getPagedBundles } from "../../api/bundles";
-import { ToolType } from "../../api/types";
+import type { BundleDto } from "../../api/types";
 import BundlePageHeader from "./components/BundlePageHeader";
 import BundleCard from "./components/BundleCard";
 import BundleDetailsModal from "./components/BundleDetailsModal";
 import BundleSearchFiltersCard from "./components/BundleSearchFiltersCard";
-import { useArtifactTags } from "../../shared/hooks/useArtifactTags";
 import { useBottomReach } from "../../shared/hooks/useBottomReach";
 import { bundleFromDto } from "../../shared/utils/bundleFromDto";
 
-const TOOL_FILTERS = [
-  { label: "All Tools", value: undefined },
-  { label: "GitHub Copilot", value: ToolType.Copilot },
-  { label: "Claude Code", value: ToolType.Claude },
-];
-
-const DEFAULT_TOOL_FILTER_LABEL = "All Tools";
 const PAGE_SIZE = 12;
 
 export default function BundlesPage() {
   const queryClient = useQueryClient();
-  const { tags } = useArtifactTags();
 
   const [searchValue, setSearchValue] = useState("");
-  const [activeToolType, setActiveToolType] = useState<ToolType | undefined>(
-    undefined,
-  );
-  const [activeTagIds, setActiveTagIds] = useState<string[]>([]);
   const [dynamicPromptValue, setDynamicPromptValue] = useState("");
   const [isGeneratingDynamicBundle, setIsGeneratingDynamicBundle] =
     useState(false);
   const [selectedBundleId, setSelectedBundleId] = useState<string | null>(null);
+  const [selectedBundleData, setSelectedBundleData] = useState<
+    BundleDto | undefined
+  >(undefined);
 
   const bundlesQuery = useInfiniteQuery({
-    queryKey: ["bundles", searchValue, activeToolType, activeTagIds],
+    queryKey: ["bundles", searchValue],
     initialPageParam: 1,
     queryFn: ({ pageParam }) =>
       getPagedBundles({
         page: pageParam,
         pageSize: PAGE_SIZE,
         search: searchValue.trim() || undefined,
-        toolType: activeToolType,
-        tagIds: activeTagIds.length > 0 ? activeTagIds : undefined,
       }),
     getNextPageParam: (lastPage, allPages) => {
       const loadedCount = allPages.reduce(
@@ -75,26 +63,6 @@ export default function BundlesPage() {
         .map(bundleFromDto) ?? [],
     [bundlesQuery.data],
   );
-
-  const handleTagChange = (tagId: string) => {
-    setActiveTagIds((prev) =>
-      prev.includes(tagId)
-        ? prev.filter((value) => value !== tagId)
-        : [...prev, tagId],
-    );
-  };
-
-  const activeToolLabel =
-    TOOL_FILTERS.find((toolFilter) => toolFilter.value === activeToolType)
-      ?.label ?? DEFAULT_TOOL_FILTER_LABEL;
-
-  const handleToolChange = (selectedToolLabel: string) => {
-    const selectedToolType = TOOL_FILTERS.find(
-      (toolFilter) => toolFilter.label === selectedToolLabel,
-    )?.value;
-
-    setActiveToolType(selectedToolType);
-  };
 
   const handleLoadMore = () => {
     if (!bundlesQuery.hasNextPage || bundlesQuery.isFetchingNextPage) {
@@ -122,7 +90,8 @@ export default function BundlesPage() {
       });
 
       await queryClient.invalidateQueries({ queryKey: ["bundles"] });
-      setSelectedBundleId(dynamicBundle.id);
+      setSelectedBundleId(null);
+      setSelectedBundleData(dynamicBundle);
     } finally {
       setIsGeneratingDynamicBundle(false);
     }
@@ -173,13 +142,6 @@ export default function BundlesPage() {
         searchPlaceholder="Search bundles..."
         searchValue={searchValue}
         onSearchChange={setSearchValue}
-        toolFilters={TOOL_FILTERS.map((toolFilter) => toolFilter.label)}
-        activeTool={activeToolLabel}
-        onToolChange={handleToolChange}
-        tags={tags}
-        activeTagIds={activeTagIds}
-        onTagChange={handleTagChange}
-        onClearTags={() => setActiveTagIds([])}
       />
 
       {bundlesQuery.isPending ? (
@@ -213,9 +175,10 @@ export default function BundlesPage() {
               <BundleCard
                 key={bundle.id}
                 bundle={bundle}
-                onViewDetails={(selectedBundle) =>
-                  setSelectedBundleId(selectedBundle.id)
-                }
+                onViewDetails={(selectedBundle) => {
+                  setSelectedBundleData(undefined);
+                  setSelectedBundleId(selectedBundle.id);
+                }}
               />
             ))}
           </Grid>
@@ -230,10 +193,15 @@ export default function BundlesPage() {
       )}
 
       <BundleDetailsModal
-        isOpen={Boolean(selectedBundleId)}
-        onClose={() => setSelectedBundleId(null)}
+        isOpen={Boolean(selectedBundleId || selectedBundleData)}
+        onClose={() => {
+          setSelectedBundleId(null);
+          setSelectedBundleData(undefined);
+        }}
         bundleId={selectedBundleId}
-        onAfterSave={async () => {
+        preloadedBundle={selectedBundleData}
+        onAfterSave={async (savedBundle) => {
+          setSelectedBundleData(savedBundle);
           await bundlesQuery.refetch();
         }}
       />
