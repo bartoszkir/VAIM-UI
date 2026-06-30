@@ -40,5 +40,8 @@ export function artifactFromPrompt(
     isFavorite: likedPromptIds?.has(prompt.id) ?? false,
     comments: 0,
     updatedAt: prompt.updatedAt ?? prompt.createdAt,
+    hasPendingPr: prompt.hasPendingPr,
+    prUrl: prompt.prUrl,
+    moderationStatus: prompt.moderationStatus,
   };
 }
