@@ -1,3 +1,4 @@
+import { downloadFileFromResponse, getApiBaseUrl } from "./download";
 import { httpClient } from "./httpClient";
 import type {
   PromptCreateFromMarkdownRequest,
@@ -96,4 +97,14 @@ export async function unlikePrompt(id: string): Promise<void> {
 
 export async function getMyLikedPromptIds(): Promise<string[]> {
   return httpClient.get<string[]>("/prompts/my-likes");
+}
+
+export async function downloadPromptMarkdown(id: string): Promise<void> {
+  const url = `${getApiBaseUrl()}/prompts/${id}/download`;
+  const response = await fetch(url, {
+    method: "GET",
+    credentials: "include",
+  });
+
+  return downloadFileFromResponse(response, url, `prompt-${id}.md`);
 }

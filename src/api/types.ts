@@ -1,7 +1,10 @@
 export const PromptType = {
   Prompt: 1,
+  Agent: 2,
   Instruction: 3,
   Skill: 4,
+  Hook: 5,
+  Workflow: 6,
 } as const;
 
 export type PromptType = (typeof PromptType)[keyof typeof PromptType];
@@ -12,6 +15,17 @@ export const ToolType = {
 } as const;
 
 export type ToolType = (typeof ToolType)[keyof typeof ToolType];
+
+export const ModerationStatus = {
+  Pending: 0,
+  Approved: 1,
+  Rejected: 2,
+  Flagged: 3,
+  Removed: 4,
+} as const;
+
+export type ModerationStatus =
+  (typeof ModerationStatus)[keyof typeof ModerationStatus];
 
 export type ProblemDetails = {
   type?: string | null;
@@ -80,6 +94,9 @@ export type PromptDto = {
   tags?: TagDto[] | null;
   toolTypes?: ToolType[] | null;
   likesCount: number;
+  hasPendingPr: boolean;
+  prUrl?: string | null;
+  moderationStatus: ModerationStatus;
 };
 
 export type PromptDtoPagedResult = {
@@ -143,6 +160,9 @@ export type BundleDto = {
   toolTypes?: ToolType[] | null;
   tags?: TagDto[] | null;
   artifacts?: BundleArtifactDto[] | null;
+  hasPendingPr: boolean;
+  prUrl?: string | null;
+  moderationStatus: ModerationStatus;
 };
 
 export type BundleDtoPagedResult = {
@@ -182,4 +202,31 @@ export type BundleCreateRequest = {
 
 export type BundleDownloadByArtifactIdsRequest = {
   artifactIds: string[];
+};
+
+export type GitHubAssetReferenceDto = {
+  fileName?: string | null;
+  relativePath?: string | null;
+  content?: string | null;
+};
+
+export type GitHubAssetDto = {
+  path?: string | null;
+  name?: string | null;
+  category?: string | null;
+  type: PromptType;
+  content?: string | null;
+  description?: string | null;
+  references?: GitHubAssetReferenceDto[] | null;
+  loadedAt: string;
+};
+
+export type PrCallbackRequest = {
+  prUrl?: string | null;
+};
+
+export type SearchResult = {
+  prompts?: PromptDto[] | null;
+  bundles?: BundleDto[] | null;
+  searchMode?: string | null;
 };

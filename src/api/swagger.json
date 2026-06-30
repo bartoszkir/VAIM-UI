@@ -1,0 +1,2078 @@
+{
+  "openapi": "3.0.4",
+  "info": {
+    "title": "VAIM API",
+    "version": "v1"
+  },
+  "paths": {
+    "/api/auth/SignOut": {
+      "get": {
+        "tags": [
+          "Authorization"
+        ],
+        "summary": "Signs the authenticated user out and redirects to the configured post-logout URI.",
+        "description": "Clears both the cookie and the OpenID Connect session. Requires an active session.",
+        "responses": {
+          "302": {
+            "description": "Redirect to the post-logout URI."
+          }
+        }
+      }
+    },
+    "/api/auth/SignIn": {
+      "get": {
+        "tags": [
+          "Authorization"
+        ],
+        "summary": "Initiates the Veracity OpenID Connect login flow.",
+        "description": "Redirects the browser to the Veracity identity provider. After successful login the user is redirected back to the configured redirect URI.",
+        "responses": {
+          "302": {
+            "description": "Redirect to the Veracity identity provider login page."
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": [
+          "Authorization"
+        ],
+        "summary": "Returns the Veracity profile of the currently authenticated user and subscribes them to the service.",
+        "responses": {
+          "200": {
+            "description": "User profile from the Veracity platform."
+          },
+          "401": {
+            "description": "No active session or the Veracity token is invalid/expired.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bundles/paging": {
+      "get": {
+        "tags": [
+          "Bundle"
+        ],
+        "summary": "Returns a paginated list of bundles.",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number, starting at 1.",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "description": "Number of items per page (1–100).",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 12
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Optional full-text search on name and description.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "toolType",
+            "in": "query",
+            "description": "Optional tool type filter.",
+            "schema": {
+              "$ref": "#/components/schemas/ToolType"
+            }
+          },
+          {
+            "name": "tagIds",
+            "in": "query",
+            "description": "Optional tag IDs — returns bundles tagged with any of the specified tags.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paged result of bundles.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BundleDtoPagedResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid pagination parameters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bundles/{id}": {
+      "get": {
+        "tags": [
+          "Bundle"
+        ],
+        "summary": "Returns a single bundle by its identifier.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The bundle GUID.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bundle details including artifacts and tags.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BundleDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Bundle not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Bundle"
+        ],
+        "summary": "Updates an existing static bundle.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The bundle GUID.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Updated fields: name, description, artifacts and tags.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BundleUpdateRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BundleUpdateRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/BundleUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated bundle.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BundleDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Bundle not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bundles/create": {
+      "post": {
+        "tags": [
+          "Bundle"
+        ],
+        "summary": "Creates a new static bundle manually.",
+        "requestBody": {
+          "description": "Bundle data including name, description and artifact IDs.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BundleCreateRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BundleCreateRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/BundleCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Bundle created successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BundleDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bundles/generate": {
+      "post": {
+        "tags": [
+          "Bundle"
+        ],
+        "summary": "Generates a dynamic bundle from a natural language prompt using AI.",
+        "requestBody": {
+          "description": "User prompt describing the desired bundle.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BundleGenerateRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BundleGenerateRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/BundleGenerateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "AI-generated bundle.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BundleDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Prompt could not be processed by the LLM.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bundles/{id}/download": {
+      "get": {
+        "tags": [
+          "Bundle"
+        ],
+        "summary": "Downloads a bundle as a ZIP archive by bundle ID.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The bundle GUID.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ZIP stream containing all artifact markdown files."
+          },
+          "404": {
+            "description": "Bundle not found.",
+            "content": {
+              "application/zip": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/octet-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bundles/download": {
+      "post": {
+        "tags": [
+          "Bundle"
+        ],
+        "summary": "Downloads a ZIP archive built from explicit artifact IDs.",
+        "requestBody": {
+          "description": "List of artifact (prompt) IDs to include in the ZIP.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BundleDownloadByArtifactIdsRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BundleDownloadByArtifactIdsRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/BundleDownloadByArtifactIdsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "ZIP stream containing the requested artifact markdown files."
+          },
+          "400": {
+            "description": "Validation failed.",
+            "content": {
+              "application/zip": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/octet-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/github-marketplace": {
+      "get": {
+        "tags": [
+          "GitHubMarketplace"
+        ],
+        "summary": "Returns all assets from all mapped GitHub repository categories.",
+        "responses": {
+          "200": {
+            "description": "List of all GitHub assets.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GitHubAssetDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/github-marketplace/by-type/{type}": {
+      "get": {
+        "tags": [
+          "GitHubMarketplace"
+        ],
+        "summary": "Returns assets filtered by PromptType (Skill, Prompt, Agent, Instruction, Hook, Workflow).",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "path",
+            "description": "PromptType enum value.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PromptType"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Filtered list of GitHub assets.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GitHubAssetDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid PromptType value.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/github-marketplace/by-category/{category}": {
+      "get": {
+        "tags": [
+          "GitHubMarketplace"
+        ],
+        "summary": "Returns assets from a specific repository category folder (e.g. \"skills\", \"prompts\").",
+        "parameters": [
+          {
+            "name": "category",
+            "in": "path",
+            "description": "Category folder name in the GitHub repository.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of GitHub assets in the category.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GitHubAssetDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unknown or unsupported category.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/github-marketplace/categories": {
+      "get": {
+        "tags": [
+          "GitHubMarketplace"
+        ],
+        "summary": "Returns the list of all supported category folder names and their mapped PromptType.",
+        "responses": {
+          "200": {
+            "description": "Mapping of folder name → PromptType."
+          }
+        }
+      }
+    },
+    "/api/github-marketplace/cache/invalidate/{category}": {
+      "post": {
+        "tags": [
+          "GitHubMarketplace"
+        ],
+        "summary": "[TEST] Manually invalidates the cache for a specific category.\nIn production this will be triggered by a GitHub webhook after a merge.",
+        "parameters": [
+          {
+            "name": "category",
+            "in": "path",
+            "description": "Category folder name to invalidate.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Cache invalidated."
+          },
+          "400": {
+            "description": "Unknown category.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/github-marketplace/cache/invalidate": {
+      "post": {
+        "tags": [
+          "GitHubMarketplace"
+        ],
+        "summary": "[TEST] Manually invalidates the full GitHub assets cache.\nIn production this will be triggered by a GitHub webhook after a merge.",
+        "responses": {
+          "204": {
+            "description": "Cache invalidated."
+          }
+        }
+      }
+    },
+    "/api/github/webhook": {
+      "post": {
+        "tags": [
+          "GitHubWebhook"
+        ],
+        "summary": "Handles incoming GitHub webhook payloads.\nValidates the HMAC-SHA256 signature and dispatches pull_request events.",
+        "responses": {
+          "200": {
+            "description": "Event processed or ignored."
+          },
+          "401": {
+            "description": "Signature missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/github/pr-callback/merged": {
+      "post": {
+        "tags": [
+          "PrCallback"
+        ],
+        "summary": "Notifies the service that a pull request was merged.\nClears the pending flag so the item is shown as fully approved.\nOn the next sync the real GitHub content will replace any local overlay.",
+        "requestBody": {
+          "description": "PR URL of the merged pull request.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrCallbackRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrCallbackRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrCallbackRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Pending flag cleared successfully."
+          },
+          "404": {
+            "description": "No pending change found for the given PR URL.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/github/pr-callback/declined": {
+      "post": {
+        "tags": [
+          "PrCallback"
+        ],
+        "summary": "Notifies the service that a pull request was closed without merging (declined).\nFor new items: removes them from the cache.\nFor updates: reverts the cache to the original GitHub content.",
+        "requestBody": {
+          "description": "PR URL of the declined pull request.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrCallbackRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrCallbackRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrCallbackRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Item removed or reverted successfully."
+          }
+        }
+      }
+    },
+    "/api/prompts/types": {
+      "get": {
+        "tags": [
+          "Prompt"
+        ],
+        "summary": "Returns all available prompt types (Agent, Instruction, Skill, Prompt, Hook, Workflow).",
+        "responses": {
+          "200": {
+            "description": "List of prompt types with numeric id and name."
+          }
+        }
+      }
+    },
+    "/api/prompts/toolTypes": {
+      "get": {
+        "tags": [
+          "Prompt"
+        ],
+        "summary": "Returns all available tool types (Copilot, Claude).",
+        "responses": {
+          "200": {
+            "description": "List of tool types with numeric id and name."
+          }
+        }
+      }
+    },
+    "/api/prompts": {
+      "get": {
+        "tags": [
+          "Prompt"
+        ],
+        "summary": "Returns all public prompts ordered by newest first.",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "description": "Optional prompt type filter.",
+            "schema": {
+              "$ref": "#/components/schemas/PromptType"
+            }
+          },
+          {
+            "name": "toolType",
+            "in": "query",
+            "description": "Optional tool type filter — returns prompts that support this tool.",
+            "schema": {
+              "$ref": "#/components/schemas/ToolType"
+            }
+          },
+          {
+            "name": "tagIds",
+            "in": "query",
+            "description": "Optional tag IDs — returns prompts tagged with any of the specified tags.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of public prompts including tags and like count.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PromptDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/prompts/paging": {
+      "get": {
+        "tags": [
+          "Prompt"
+        ],
+        "summary": "Returns a paginated list of public prompts.",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number, starting at 1.",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "description": "Number of items per page (1–100).",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 20
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "description": "Optional prompt type filter.",
+            "schema": {
+              "$ref": "#/components/schemas/PromptType"
+            }
+          },
+          {
+            "name": "toolType",
+            "in": "query",
+            "description": "Optional tool type filter — returns prompts that support this tool.",
+            "schema": {
+              "$ref": "#/components/schemas/ToolType"
+            }
+          },
+          {
+            "name": "tagIds",
+            "in": "query",
+            "description": "Optional tag IDs — returns prompts tagged with any of the specified tags.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paged result including items, total count, page and page size.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptDtoPagedResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid pagination parameters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/prompts/{id}": {
+      "get": {
+        "tags": [
+          "Prompt"
+        ],
+        "summary": "Returns a single prompt by its identifier.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The prompt GUID.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Prompt details including tags and like count.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Prompt not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Prompt"
+        ],
+        "summary": "Updates an existing prompt.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The prompt GUID.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Updated fields: name, description, content, type, tags and visibility.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PromptUpdateRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PromptUpdateRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PromptUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated prompt.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Prompt not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/prompts/{id}/download": {
+      "get": {
+        "tags": [
+          "Prompt"
+        ],
+        "summary": "Downloads the prompt content as a Markdown file.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The prompt GUID.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Markdown file containing the prompt content."
+          },
+          "404": {
+            "description": "Prompt not found.",
+            "content": {
+              "text/markdown": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/prompts/create": {
+      "post": {
+        "tags": [
+          "Prompt"
+        ],
+        "summary": "Creates a new prompt manually.",
+        "requestBody": {
+          "description": "Prompt data including name, description, content, type and optional tag IDs.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PromptCreateRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PromptCreateRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PromptCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Prompt created successfully. Location header points to the new resource.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/prompts/create/markdown": {
+      "post": {
+        "tags": [
+          "Prompt"
+        ],
+        "summary": "Creates a new prompt from raw markdown text using AI parsing.",
+        "description": "The markdown is sent to an LLM which extracts the title, description, content and tags automatically.\nExisting tags are matched by name; unrecognised tags are created.",
+        "requestBody": {
+          "description": "Markdown text and desired prompt type.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PromptCreateFromMarkdownRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PromptCreateFromMarkdownRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PromptCreateFromMarkdownRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Prompt created successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Markdown could not be parsed by the LLM.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/prompts/{id}/like": {
+      "post": {
+        "tags": [
+          "Prompt"
+        ],
+        "summary": "Adds a like to a prompt on behalf of the authenticated user.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The prompt GUID.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Like added successfully."
+          },
+          "404": {
+            "description": "Prompt not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "User has already liked this prompt.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Prompt"
+        ],
+        "summary": "Removes a like from a prompt on behalf of the authenticated user.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The prompt GUID.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Like removed successfully."
+          },
+          "404": {
+            "description": "Like not found for this prompt.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/prompts/my-likes": {
+      "get": {
+        "tags": [
+          "Prompt"
+        ],
+        "summary": "Returns the IDs of all prompts liked by the authenticated user.",
+        "description": "Intended to be fetched once on app load and cached client-side for O(1) liked-state lookup per prompt.",
+        "responses": {
+          "200": {
+            "description": "List of liked prompt GUIDs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/search": {
+      "get": {
+        "tags": [
+          "Search"
+        ],
+        "summary": "Searches prompts and bundles using hybrid logic.",
+        "description": "Short queries (≤3 words or ≤30 chars) use fast database full-text search on name, description and tags.\nLonger descriptive queries are sent to Azure OpenAI (GPT-4o) for semantic search.\nFalls back to simple search if AI is unavailable.",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Search query — can be a keyword (e.g. \"UI\") or a full sentence (e.g. \"I want a prompt to refactor React components\").",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Matching prompts and bundles with the search mode used.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Query is empty.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tags": {
+      "get": {
+        "tags": [
+          "Tag"
+        ],
+        "summary": "Returns all tags ordered alphabetically.",
+        "responses": {
+          "200": {
+            "description": "List of all tags.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TagDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Tag"
+        ],
+        "summary": "Creates a new tag.",
+        "requestBody": {
+          "description": "Tag name.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TagCreateRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TagCreateRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TagCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tag created. Location header points to the new resource.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tags/{id}": {
+      "put": {
+        "tags": [
+          "Tag"
+        ],
+        "summary": "Updates the name of an existing tag.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The tag GUID.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "New tag name.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TagUpdateRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TagUpdateRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TagUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated tag.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tag not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Tag"
+        ],
+        "summary": "Deletes a tag.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The tag GUID.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Tag deleted successfully."
+          },
+          "404": {
+            "description": "Tag not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Tag is still assigned to one or more prompts and cannot be deleted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BundleArtifactDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "type": {
+            "$ref": "#/components/schemas/PromptType"
+          },
+          "toolTypes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ToolType"
+            },
+            "nullable": true
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TagDto"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "BundleCreateRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "artifactIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "nullable": true
+          },
+          "toolTypes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ToolType"
+            },
+            "nullable": true
+          },
+          "tagIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "BundleDownloadByArtifactIdsRequest": {
+        "type": "object",
+        "properties": {
+          "artifactIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "BundleDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "authorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "authorDisplayName": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "isDynamic": {
+            "type": "boolean"
+          },
+          "toolTypes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ToolType"
+            },
+            "nullable": true
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TagDto"
+            },
+            "nullable": true
+          },
+          "artifacts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BundleArtifactDto"
+            },
+            "nullable": true
+          },
+          "hasPendingPr": {
+            "type": "boolean"
+          },
+          "prUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "moderationStatus": {
+            "$ref": "#/components/schemas/ModerationStatus"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BundleDtoPagedResult": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BundleDto"
+            },
+            "nullable": true
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "page": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BundleGenerateRequest": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "BundleUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "artifactIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "nullable": true
+          },
+          "toolTypes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ToolType"
+            },
+            "nullable": true
+          },
+          "tagIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "GitHubAssetDto": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "category": {
+            "type": "string",
+            "nullable": true
+          },
+          "type": {
+            "$ref": "#/components/schemas/PromptType"
+          },
+          "content": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "references": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GitHubAssetReferenceDto"
+            },
+            "nullable": true
+          },
+          "loadedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false,
+        "description": "DTO returned by the GitHubMarketplaceController.\nIntentionally separate from the DB-backed PromptDto to avoid coupling."
+      },
+      "GitHubAssetReferenceDto": {
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "nullable": true
+          },
+          "relativePath": {
+            "type": "string",
+            "nullable": true
+          },
+          "content": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ModerationStatus": {
+        "enum": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "type": "integer",
+        "format": "int32"
+      },
+      "PrCallbackRequest": {
+        "type": "object",
+        "properties": {
+          "prUrl": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Request body for PR callback endpoints."
+      },
+      "ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "instance": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": { }
+      },
+      "PromptCreateFromMarkdownRequest": {
+        "type": "object",
+        "properties": {
+          "markdownText": {
+            "type": "string",
+            "nullable": true
+          },
+          "type": {
+            "$ref": "#/components/schemas/PromptType"
+          },
+          "toolTypes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ToolType"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "PromptCreateRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "content": {
+            "type": "string",
+            "nullable": true
+          },
+          "type": {
+            "$ref": "#/components/schemas/PromptType"
+          },
+          "toolTypes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ToolType"
+            },
+            "nullable": true
+          },
+          "tagIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "PromptDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "content": {
+            "type": "string",
+            "nullable": true
+          },
+          "authorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "authorDisplayName": {
+            "type": "string",
+            "nullable": true
+          },
+          "isPublic": {
+            "type": "boolean"
+          },
+          "type": {
+            "$ref": "#/components/schemas/PromptType"
+          },
+          "toolTypes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ToolType"
+            },
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TagDto"
+            },
+            "nullable": true
+          },
+          "likesCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "hasPendingPr": {
+            "type": "boolean"
+          },
+          "prUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "moderationStatus": {
+            "$ref": "#/components/schemas/ModerationStatus"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PromptDtoPagedResult": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PromptDto"
+            },
+            "nullable": true
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "page": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PromptType": {
+        "enum": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "type": "integer",
+        "format": "int32"
+      },
+      "PromptUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "content": {
+            "type": "string",
+            "nullable": true
+          },
+          "type": {
+            "$ref": "#/components/schemas/PromptType"
+          },
+          "toolTypes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ToolType"
+            },
+            "nullable": true
+          },
+          "tagIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "nullable": true
+          },
+          "isPublic": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SearchResult": {
+        "type": "object",
+        "properties": {
+          "prompts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PromptDto"
+            },
+            "nullable": true
+          },
+          "bundles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BundleDto"
+            },
+            "nullable": true
+          },
+          "searchMode": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "TagCreateRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "TagDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "TagUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ToolType": {
+        "enum": [
+          1,
+          2
+        ],
+        "type": "integer",
+        "format": "int32"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Authorization"
+    },
+    {
+      "name": "Bundle"
+    },
+    {
+      "name": "GitHubMarketplace"
+    },
+    {
+      "name": "GitHubWebhook"
+    },
+    {
+      "name": "PrCallback"
+    },
+    {
+      "name": "Prompt"
+    },
+    {
+      "name": "Search"
+    },
+    {
+      "name": "Tag"
+    }
+  ]
+}
