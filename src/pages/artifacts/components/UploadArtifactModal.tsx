@@ -187,6 +187,10 @@ export default function UploadArtifactModal({
       errors.content = "Content is required.";
     }
 
+    if (!description.trim()) {
+      errors.description = "Description is required.";
+    }
+
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       return;
@@ -433,14 +437,23 @@ export default function UploadArtifactModal({
                   </Box>
 
                   <Box column gap={1}>
-                    <Label htmlFor="upload-description" text="Description" />
+                    <Label htmlFor="upload-description" text="Description *" />
                     <Textarea
                       id="upload-description"
                       value={description}
-                      onChange={(event) => setDescription(event.target.value)}
+                      onChange={(event) => {
+                        setDescription(event.target.value);
+                        clearFieldError("description");
+                      }}
                       placeholder="Describe what this artifact does and when to use it"
                       rows={3}
+                      isInvalid={!!fieldErrors.description}
                     />
+                    {fieldErrors.description ? (
+                      <Message id="description-error" variant="error">
+                        {fieldErrors.description}
+                      </Message>
+                    ) : null}
                   </Box>
 
                   <Box column gap={1}>
